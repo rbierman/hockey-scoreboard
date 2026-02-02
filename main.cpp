@@ -24,7 +24,7 @@ int main() {
     displays.push_back(&cl);
 
     std::cout << "Starting scoreboard loop..." << std::endl;
-    while(true) {
+    while(sfml.isOpen()) {
         // --- LOGIC ---
         // All drawing happens on the DoubleFramebuffer
         dfb.clearBack();

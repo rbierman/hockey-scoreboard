@@ -8,7 +8,6 @@
 class DoubleFramebuffer;
 
 class SFMLDisplay : public IDisplay {
-private:
     sf::RenderWindow window;
     sf::Texture texture;
     sf::Sprite sprite;
@@ -17,4 +16,5 @@ public:
     explicit SFMLDisplay(DoubleFramebuffer& buffer);
 
     void output() override;
+    bool isOpen() const;
 };

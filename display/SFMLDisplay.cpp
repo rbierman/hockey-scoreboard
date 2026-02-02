@@ -5,30 +5,43 @@
 #include "SFMLDisplay.h"
 #include "DoubleFramebuffer.h"
 #include <iostream>
+#include <SFML/Window/Event.hpp>
 
 
-SFMLDisplay::SFMLDisplay(DoubleFramebuffer& buffer) : IDisplay(buffer), sprite(texture) { // Bind sprite to texture immediately {
+SFMLDisplay::SFMLDisplay(DoubleFramebuffer& buffer)
+    : IDisplay(buffer),
+      texture(sf::Vector2u(static_cast<unsigned int>(dfb.getWidth()), static_cast<unsigned int>(dfb.getHeight()))),
+      sprite(texture)
+{
     auto w = static_cast<unsigned int>(dfb.getWidth());
     auto h = static_cast<unsigned int>(dfb.getHeight());
 
-    // SFML 3: VideoMode takes a Vector2u
-    window.create(sf::VideoMode({w * 2, h * 2}), "Preview");
+    window.create(sf::VideoMode({w * 10, h * 10}), "Preview");
 
-    // SFML 3: create() is now resize() or handled via texture.resize()
-    // If resize() doesn't work, check your SFML version; create() was changed.
-    (void)texture.resize({w, h});
-
-    // SFML 3: setScale takes a Vector2f
-    sprite.setScale({2.0f, 2.0f});
+    sprite.setScale({10.0f, 10.0f});
 
     std::cout << "SFML initialized at " << w << "x" << h << std::endl;
 }
 
 void SFMLDisplay::output() {
+    if (!window.isOpen()) {
+        return; // Don't do anything if the window is closed
+    }
+
+    while (const auto event = window.pollEvent())
+    {
+        if (event->is<sf::Event::Closed>())
+            window.close();
+    }
+
     // We only pull the data that is marked as "Front"
     texture.update(dfb.getFrontData());
 
     window.clear();
     window.draw(sprite);
     window.display();
+}
+
+bool SFMLDisplay::isOpen() const {
+    return window.isOpen();
 }
