@@ -16,9 +16,9 @@ SFMLDisplay::SFMLDisplay(DoubleFramebuffer& buffer)
     auto w = static_cast<unsigned int>(dfb.getWidth());
     auto h = static_cast<unsigned int>(dfb.getHeight());
 
-    window.create(sf::VideoMode({w * 10, h * 10}), "Preview");
+    window.create(sf::VideoMode({w * 2, h * 2}), "Preview");
 
-    sprite.setScale({10.0f, 10.0f});
+    sprite.setScale({2.0f, 2.0f});
 
     std::cout << "SFML initialized at " << w << "x" << h << std::endl;
 }

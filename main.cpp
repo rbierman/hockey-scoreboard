@@ -1,13 +1,16 @@
 #include <iostream>
 #include <unistd.h>
 #include <vector>
+#include <random> // For random numbers for dynamic scores/time
 
 #include "display/DoubleFramebuffer.h"
 #include "display/SFMLDisplay.h"
 #include "display/ColorLightDisplay.h"
+#include "ScoreboardController.h"
 
 int main() {
-    int w = 64, h = 32;
+    int w = 384, h = 160; // Original dimensions, Blend2D will scale later
+    // int w = 64, h = 32; // Original dimensions, Blend2D will scale later
 
     // The single source of truth for the scoreboard's state
     DoubleFramebuffer dfb(w, h);
@@ -23,38 +26,43 @@ int main() {
     ColorLightDisplay cl("enx00e04c68012e", dfb);
     displays.push_back(&cl);
 
+    // Scoreboard controller
+    ScoreboardController scoreboard(dfb);
+
     std::cout << "Starting scoreboard loop..." << std::endl;
+
+    // Random number generation for testing dynamic content
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, 9);
+    std::uniform_int_distribution<> timeDist(0, 59);
+
+    int currentHomeScore = 0;
+    int currentAwayScore = 0;
+    int currentMinutes = 12;
+    int currentSeconds = 0; // Start at 0 to make it tick
+
     while(sfml.isOpen()) {
         // --- LOGIC ---
-        // All drawing happens on the DoubleFramebuffer
-        dfb.clearBack();
-
-        // 1. Draw "H" (Home) in Red
-        for(int i=2; i<7; i++) {
-            dfb.drawPixel(2, i, 255, 50, 50);
-            dfb.drawPixel(4, i, 255, 50, 50);
+        // Update scoreboard state (for demonstration, just change time and scores)
+        if (currentSeconds == 0) {
+            currentSeconds = 59;
+            currentMinutes--;
+            if (currentMinutes < 0) {
+                currentMinutes = 20; // Reset period time
+                currentHomeScore = distrib(gen); // New random scores
+                currentAwayScore = distrib(gen);
+            }
+        } else {
+            currentSeconds--;
         }
-        dfb.drawPixel(3, 4, 255, 50, 50);
 
-        // 2. Draw Home Score (e.g., 5)
-        dfb.drawNumber(5, 7, 2, 255, 255, 255);
+        scoreboard.setHomeScore(currentHomeScore);
+        scoreboard.setAwayScore(currentAwayScore);
+        scoreboard.setTime(currentMinutes, currentSeconds);
 
-        // 3. Draw ":" Separator
-        dfb.drawPixel(19, 3, 200, 200, 200);
-        dfb.drawPixel(19, 5, 200, 200, 200);
-
-        // 4. Draw Visitor Score (e.g., 2)
-        dfb.drawNumber(2, 30, 2, 255, 255, 255);
-
-        // 5. Draw "V" (Visitor) in Blue
-        for(int i=2; i<5; i++) {
-            dfb.drawPixel(35, i, 50, 50, 255);
-            dfb.drawPixel(39, i, 50, 50, 255);
-        }
-        dfb.drawPixel(36, 5, 50, 50, 255);
-        dfb.drawPixel(38, 5, 50, 50, 255);
-        dfb.drawPixel(37, 6, 50, 50, 255);
-
+        // Render the scoreboard to the framebuffer
+        scoreboard.render();
 
         // --- DISPLAY ---
         // Swap buffers to make the drawing visible to the displays
@@ -65,7 +73,7 @@ int main() {
             disp->output();
         }
 
-        usleep(33333); // ~30 FPS
+        usleep(1000000); // Update once per second (1,000,000 microseconds)
     }
 
     return 0;

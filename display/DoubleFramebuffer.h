@@ -25,6 +25,7 @@ public:
 
     // --- SYSTEM INTERFACE ---
     void swap();
+    uint8_t* getBackData();
     const uint8_t* getFrontData() const;
 
     [[nodiscard]] int getWidth() const { return width; }

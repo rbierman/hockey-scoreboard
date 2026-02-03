@@ -9,7 +9,12 @@ add_executable(hockey-scoreboard main.cpp
         display/SFMLDisplay.cpp
         display/SFMLDisplay.h
         display/ColorLightDisplay.cpp
-        display/ColorLightDisplay.h)
+        display/ColorLightDisplay.h
+        ScoreboardController.h
+        ScoreboardController.cpp)
 
 find_package(SFML COMPONENTS Network Graphics Window Audio System CONFIG REQUIRED)
 target_link_libraries(hockey-scoreboard PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)
+
+find_package(blend2d CONFIG REQUIRED)
+target_link_libraries(hockey-scoreboard PRIVATE blend2d::blend2d)

@@ -60,3 +60,7 @@ const uint8_t* DoubleFramebuffer::getFrontData() const {
     std::lock_guard<std::mutex> lock(flipMutex);
     return frontBuffer;
 }
+
+uint8_t* DoubleFramebuffer::getBackData() {
+    return backBuffer;
+}
