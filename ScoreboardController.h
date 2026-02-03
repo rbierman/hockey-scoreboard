@@ -1,11 +1,13 @@
 #pragma once
 
 #include <blend2d.h>
+#include <string> // Added missing include
 #include "display/DoubleFramebuffer.h"
+#include "ResourceLocator.h" // Include ResourceLocator
 
 class ScoreboardController {
 public:
-    explicit ScoreboardController(DoubleFramebuffer& dfb);
+    explicit ScoreboardController(DoubleFramebuffer& dfb, const ResourceLocator& resourceLocator);
 
     void render();
 
@@ -13,6 +15,13 @@ public:
     void setHomeScore(int score);
     void setAwayScore(int score);
     void setTime(int minutes, int seconds);
+    void setHomeShots(int shots);
+    void setAwayShots(int shots);
+    void setPenalty1Minutes(int minutes);
+    void setPenalty2Minutes(int minutes);
+    void setCurrentPeriod(int period);
+    void setHomeTeamName(const std::string& name);
+    void setAwayTeamName(const std::string& name);
 
 private:
     DoubleFramebuffer& dfb;
@@ -22,9 +31,20 @@ private:
     int awayScore = 0;
     int timeMinutes = 12;
     int timeSeconds = 34;
+    int homeShots = 0;
+    int awayShots = 0;
+    int penalty1Minutes = 0;
+    int penalty2Minutes = 0;
+    int currentPeriod = 1;
+    std::string homeTeamName = "HOME"; // New
+    std::string awayTeamName = "AWAY"; // New
 
     BLFontFace fontFace;
     BLFont font;
+    BLFont shotsFont; // New font for shots on goal
+
+private: // Added this line to move it to private scope
+    const ResourceLocator& _resourceLocator;
 
     void loadFont(const char* path);
 };
