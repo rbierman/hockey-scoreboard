@@ -13,7 +13,7 @@ public:
     ~ColorLightDisplay() override;
 
     void output() override;
-
+    void sendBrightness(uint8_t brightness);
 
 private:
     int m_sockfd;
@@ -24,7 +24,6 @@ private:
     const uint8_t srcMac[6] = {0x22, 0x22, 0x33, 0x44, 0x55, 0x66};
 
     void setupSocket();
-    void sendBrightness(uint8_t brightness);
     void sendraw(uint8_t* data, int len);
     void sendSync();
 };

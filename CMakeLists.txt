@@ -11,7 +11,9 @@ add_executable(hockey-scoreboard main.cpp
         display/ColorLightDisplay.cpp
         display/ColorLightDisplay.h
         ScoreboardController.h
-        ScoreboardController.cpp)
+        ScoreboardController.cpp
+        CommandLineArgs.h
+        CommandLineArgs.cpp)
 
 find_package(SFML COMPONENTS Network Graphics Window Audio System CONFIG REQUIRED)
 target_link_libraries(hockey-scoreboard PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)
