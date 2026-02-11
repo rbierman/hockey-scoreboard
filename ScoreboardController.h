@@ -24,6 +24,14 @@ public:
     void setHomeTeamName(const std::string& name);
     void setAwayTeamName(const std::string& name);
     void setClockMode(ClockMode mode);
+    void toggleClock();
+    void addHomeScore(int delta = 1);
+    void addAwayScore(int delta = 1);
+    void addHomeShots(int delta = 1);
+    void addAwayShots(int delta = 1);
+    void addHomePenalty(int seconds, int playerNumber);
+    void addAwayPenalty(int seconds, int playerNumber);
+    void nextPeriod();
 
 private:
     ScoreboardState state;

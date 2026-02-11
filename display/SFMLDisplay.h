@@ -20,4 +20,5 @@ public:
 
     void output() override;
     bool isOpen() const;
+    sf::RenderWindow& getWindow() { return window; }
 };

@@ -56,6 +56,50 @@ void ScoreboardController::setClockMode(ClockMode mode) {
     state.clockMode = mode;
 }
 
+void ScoreboardController::toggleClock() {
+    if (state.clockMode == ClockMode::Running) {
+        state.clockMode = ClockMode::Stopped;
+    } else {
+        state.clockMode = ClockMode::Running;
+    }
+}
+
+void ScoreboardController::addHomeScore(int delta) {
+    state.homeScore += delta;
+    if (state.homeScore < 0) state.homeScore = 0;
+}
+
+void ScoreboardController::addAwayScore(int delta) {
+    state.awayScore += delta;
+    if (state.awayScore < 0) state.awayScore = 0;
+}
+
+void ScoreboardController::addHomeShots(int delta) {
+    state.homeShots += delta;
+    if (state.homeShots < 0) state.homeShots = 0;
+}
+
+void ScoreboardController::addAwayShots(int delta) {
+    state.awayShots += delta;
+    if (state.awayShots < 0) state.awayShots = 0;
+}
+
+void ScoreboardController::addHomePenalty(int seconds, int playerNumber) {
+    // Find an empty slot or overwrite the oldest
+    int index = (state.homePenalties[0].secondsRemaining <= 0) ? 0 : 1;
+    setHomePenalty(index, seconds, playerNumber);
+}
+
+void ScoreboardController::addAwayPenalty(int seconds, int playerNumber) {
+    int index = (state.awayPenalties[0].secondsRemaining <= 0) ? 0 : 1;
+    setAwayPenalty(index, seconds, playerNumber);
+}
+
+void ScoreboardController::nextPeriod() {
+    state.currentPeriod++;
+    if (state.currentPeriod > 3) state.currentPeriod = 1;
+}
+
 void ScoreboardController::resetGame() {
     std::uniform_int_distribution<> distribScore(0, 9);
     std::uniform_int_distribution<> distribShots(0, 50);
