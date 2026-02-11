@@ -44,12 +44,8 @@ void ScoreboardController::render() {
     // Clear the background
     ctx.clearAll();
 
-
     // Set the fill style for the text
-    ctx.setFillStyle(BLRgba32(0xFFFFFFFF)); // White
-
-    // Hardcoded positions for 384x160 display
-    double penaltyTextY = 150.0; // Baseline Y position for penalties
+    ctx.setFillStyle(BLRgba32(255, 255, 255)); // White
 
     BLGlyphBuffer gb; // Initialize glyph buffer once
 
@@ -89,7 +85,7 @@ void ScoreboardController::render() {
     int timeRectX = (int)startX - timePadding;
 
     // --- Team Names ---
-    ctx.setFillStyle(BLRgba32(0xFFFFFFFF)); // White for team names
+    ctx.setFillStyle(BLRgba32(255, 255, 255)); // White for team names
 
     // Home Team Name (Centered in the left area)
     gb.setUtf8Text(homeTeamName.c_str(), homeTeamName.length());
@@ -114,7 +110,7 @@ void ScoreboardController::render() {
     // Draw the time (centered)
     double currentX = startX;
 
-    ctx.setFillStyle(BLRgba32(0xFFFFAA00)); // Orange (ABGR)
+    ctx.setFillStyle(BLRgba32(255, 170, 0)); // Orange
 
     gb.setUtf8Text(minutes.c_str(), minutes.length());
     ctx.fillUtf8Text(BLPoint(currentX, clockTextY), font, minutes.c_str());
@@ -128,7 +124,7 @@ void ScoreboardController::render() {
     ctx.fillUtf8Text(BLPoint(currentX, clockTextY), font, seconds.c_str());
 
     // Draw 1px white border around the time
-    ctx.setStrokeStyle(BLRgba32(0xFFFFFFFF));
+    ctx.setStrokeStyle(BLRgba32(255, 255, 255));
     ctx.setStrokeWidth(2.0);
     int timeRectY = -1;
     int timeRectH = (int)clockTextY + (3 * timePadding);
@@ -137,7 +133,7 @@ void ScoreboardController::render() {
     gb.clear();
     // Calculate Y position for the line below team names
     // --- Scores ---
-    ctx.setFillStyle(BLRgba32(0xFF0000FF)); // Red for scores (ABGR)
+    ctx.setFillStyle(BLRgba32(255, 0, 0)); // Red for scores
 
     // Draw the home score (Centered in the left area)
     BLFontMetrics fontMetrics = font.metrics();
@@ -178,22 +174,20 @@ void ScoreboardController::render() {
     double totalPeriodWidth = tmPeriodLabel.advance.x + tmPeriodNum.advance.x;
     double periodX = timeRectX + (timeRectW / 2.0) - (totalPeriodWidth / 2.0);
 
-    ctx.setFillStyle(BLRgba32(0xFFFFFFFF)); // White for "PERIOD:"
+    ctx.setFillStyle(BLRgba32(255, 255, 255)); // White for "PERIOD:"
     ctx.fillUtf8Text(BLPoint(periodX, mainTextY), shotsFont, periodLabel.c_str());
     
     // Underline "PERIOD" (part of the label)
-    ctx.setStrokeStyle(BLRgba32(0xFFFFFFFF));
+    ctx.setStrokeStyle(BLRgba32(255, 255, 255));
     ctx.setStrokeWidth(1.0);
     // Only underline the "PERIOD" part, excluding the colon if possible, 
     // but for simplicity we'll underline the whole label "PERIOD:"
     ctx.strokeLine(periodX, mainTextY + 2, periodX + tmPeriodLabel.advance.x, mainTextY + 2);
 
-    ctx.setFillStyle(BLRgba32(0xFF0000FF)); // Red for period number
+    ctx.setFillStyle(BLRgba32(255, 0, 0)); // Red for period number
     ctx.fillUtf8Text(BLPoint(periodX + tmPeriodLabel.advance.x, mainTextY), shotsFont, periodNum.c_str());
 
     // --- Penalties ---
-    ctx.setFillStyle(BLRgba32(0xFFFFAA00)); // Orange for penalties
-
     auto formatTime = [](const int totalSeconds) {
         const int m = totalSeconds / 60;
         const int s = totalSeconds % 60;
@@ -212,14 +206,14 @@ void ScoreboardController::render() {
     double timeOffset = 65.0;
 
     // Home Penalty Labels
-    ctx.setFillStyle(BLRgba32(0xFFFFFFFF)); // White for labels
+    ctx.setFillStyle(BLRgba32(255, 255, 255)); // White for labels
     ctx.fillUtf8Text(BLPoint(plyrOffset, penaltyLabelY), labelFont, "PLYR");
     
     BLTextMetrics tmPlyrLabel;
     gb.setUtf8Text("PLYR", 4);
     labelFont.getTextMetrics(gb, tmPlyrLabel);
     gb.clear();
-    ctx.setStrokeStyle(BLRgba32(0xFFFFFFFF));
+    ctx.setStrokeStyle(BLRgba32(255, 255, 255));
     ctx.setStrokeWidth(1.0);
     ctx.strokeLine(plyrOffset, penaltyLabelY + 2, plyrOffset + tmPlyrLabel.advance.x, penaltyLabelY + 2);
 
@@ -246,9 +240,10 @@ void ScoreboardController::render() {
     for (auto &[secondsRemaining, playerNumber] : homePenalties) {
         if (secondsRemaining > 0) {
             double yPos = (hRow == 0) ? penaltyRow1Y : penaltyRow2Y;
-            ctx.setFillStyle(BLRgba32(0xFFFFAA00)); // Orange for player number
+            // ctx.setFillStyle(BLRgba32(255, 170, 0)); // Orange for player number
+            ctx.setFillStyle(BLRgba32(255, 170, 0)); // Orange for player number
             ctx.fillUtf8Text(BLPoint(plyrOffset + 5, yPos), shotsFont, std::to_string(playerNumber).c_str());
-            ctx.setFillStyle(BLRgba32(0xFF0000FF)); // Red for penalty time
+            ctx.setFillStyle(BLRgba32(255, 0, 0)); // Red for penalty time
             ctx.fillUtf8Text(BLPoint(timeOffset, yPos), shotsFont, formatTime(secondsRemaining).c_str());
             hRow++;
         }
@@ -259,16 +254,16 @@ void ScoreboardController::render() {
     for (auto &[secondsRemaining, playerNumber] : awayPenalties) {
         if (secondsRemaining > 0) {
             double yPos = (aRow == 0) ? penaltyRow1Y : penaltyRow2Y;
-            ctx.setFillStyle(BLRgba32(0xFFFFAA00)); // Orange for player number
+            ctx.setFillStyle(BLRgba32(255, 170, 0)); // Orange
             ctx.fillUtf8Text(BLPoint(awayPlyrX + 5, yPos), shotsFont, std::to_string(playerNumber).c_str());
-            ctx.setFillStyle(BLRgba32(0xFF0000FF)); // Red for penalty time 
+            ctx.setFillStyle(BLRgba32(255, 0, 0)); // Red
             ctx.fillUtf8Text(BLPoint(awayTimeX, yPos), shotsFont, formatTime(secondsRemaining).c_str());
             aRow++;
         }
     }
 
     // --- Shots on Goal ---
-    ctx.setFillStyle(BLRgba32(0xFFCCCCCC)); // Lighter gray for SOG text
+    ctx.setFillStyle(BLRgba32(204, 204, 204)); // Lighter gray for SOG text
     double sogLabelY = 150; // Bottom of the screen
     double sogValueY = sogLabelY - labelFontMetrics.ascent - 2; // Above the label
 
@@ -282,11 +277,11 @@ void ScoreboardController::render() {
     ctx.fillUtf8Text(BLPoint(sogLabelX, sogLabelY), labelFont, sogLabelStr.c_str());
 
     // Underline "Shots on goal"
-    ctx.setStrokeStyle(BLRgba32(0xFFFFFFFF));
+    ctx.setStrokeStyle(BLRgba32(255, 255, 255));
     ctx.setStrokeWidth(1.0);
     ctx.strokeLine(sogLabelX, sogLabelY + 2, sogLabelX + tmSogLabel.advance.x, sogLabelY + 2);
 
-    ctx.setFillStyle(BLRgba32(0xFFFFAA00)); // Orange for SOG values
+    ctx.setFillStyle(BLRgba32(255, 170, 0)); // Orange for SOG values
 
     // Home SOG value (closer to center)
     std::string homeShotsStr = std::to_string(homeShots);

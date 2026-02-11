@@ -74,9 +74,9 @@ void ColorLightDisplay::output() {
             uint8_t* packet_data_start = packet + dataIndex;
 
             for (int i = 0; i < numPixels; ++i) {
-                packet_data_start[i * 3 + 0] = row_data_start[i * 4 + 2]; // Blue
+                packet_data_start[i * 3 + 0] = row_data_start[i * 4 + 0]; // Blue
                 packet_data_start[i * 3 + 1] = row_data_start[i * 4 + 1]; // Green
-                packet_data_start[i * 3 + 2] = row_data_start[i * 4 + 0]; // Red
+                packet_data_start[i * 3 + 2] = row_data_start[i * 4 + 2]; // Red
             }
 
             sendraw(packet, dataIndex + (numPixels * 3));

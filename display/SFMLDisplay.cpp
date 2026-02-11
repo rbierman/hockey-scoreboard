@@ -10,7 +10,6 @@
 
 SFMLDisplay::SFMLDisplay(DoubleFramebuffer& buffer)
     : IDisplay(buffer)
-    // Removed texture(sf::Vector2u(...)) and sprite(texture)
 {
     auto w = static_cast<unsigned int>(dfb.getWidth());
     auto h = static_cast<unsigned int>(dfb.getHeight());
@@ -54,12 +53,12 @@ void SFMLDisplay::output() {
         for (unsigned int x = 0; x < fbWidth; ++x) {
             unsigned int index = (y * fbWidth + x) * 4; // RGBA format
 
-            uint8_t r = pixels[index + 0];
+            uint8_t b = pixels[index + 0];
             uint8_t g = pixels[index + 1];
-            uint8_t b = pixels[index + 2];
-            // uint8_t a = pixels[index + 3]; // Alpha not used for display color
+            uint8_t r = pixels[index + 2];
+            uint8_t a = pixels[index + 3]; // Alpha not used for display color
 
-            pixelShape.setFillColor(sf::Color(r, g, b));
+            pixelShape.setFillColor(sf::Color(r, g, b, a));
             pixelShape.setPosition(
                 sf::Vector2f(
                     static_cast<float>(x * (PIXEL_SIZE + PIXEL_GAP)),
