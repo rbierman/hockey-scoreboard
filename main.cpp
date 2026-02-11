@@ -14,7 +14,11 @@
 #include "CommandLineArgs.h"
 #include "ResourceLocator.h"
 
-void handleInput(sf::RenderWindow& window, ScoreboardController& scoreboard) {
+const std::vector<std::string> TEAM_NAMES = {
+    "MAMBAS", "BREAKERS", "EAGLES", "TIGERS", "SHARKS", "WOLVES", "LIONS", "STARS"
+};
+
+void handleInput(sf::RenderWindow& window, ScoreboardController& scoreboard, size_t& homeNameIdx, size_t& awayNameIdx) {
     while (const std::optional event = window.pollEvent()) {
         if (event->getIf<sf::Event::Closed>()) {
             window.close();
@@ -52,6 +56,14 @@ void handleInput(sf::RenderWindow& window, ScoreboardController& scoreboard) {
                     break;
                 case sf::Keyboard::Key::P:
                     scoreboard.nextPeriod();
+                    break;
+                case sf::Keyboard::Key::T:
+                    homeNameIdx = (homeNameIdx + 1) % TEAM_NAMES.size();
+                    scoreboard.setHomeTeamName(TEAM_NAMES[homeNameIdx]);
+                    break;
+                case sf::Keyboard::Key::Y:
+                    awayNameIdx = (awayNameIdx + 1) % TEAM_NAMES.size();
+                    scoreboard.setAwayTeamName(TEAM_NAMES[awayNameIdx]);
                     break;
                 default:
                     break;
@@ -94,8 +106,11 @@ int main(int argc, char* argv[]) {
     ScoreboardController scoreboard;
     ScoreboardRenderer renderer(dfb, resourceLocator);
 
-    scoreboard.setHomeTeamName("MAMBAS");
-    scoreboard.setAwayTeamName("BREAKERS");
+    size_t homeNameIdx = 0;
+    size_t awayNameIdx = 1;
+
+    scoreboard.setHomeTeamName(TEAM_NAMES[homeNameIdx]);
+    scoreboard.setAwayTeamName(TEAM_NAMES[awayNameIdx]);
     scoreboard.setClockMode(ClockMode::Stopped);
 
     std::cout << "Starting scoreboard loop..." << std::endl;
@@ -105,11 +120,12 @@ int main(int argc, char* argv[]) {
     std::cout << "  [1]     Home Score+" << std::endl;
     std::cout << "  [2]     Away Score+" << std::endl;
     std::cout << "  [3]     Home Shots+" << std::endl;
-    // Align columns for readability
     std::cout << "  [4]     Away Shots+" << std::endl;
     std::cout << "  [H]     Home Penalty (2:00)" << std::endl;
     std::cout << "  [A]     Away Penalty (2:00)" << std::endl;
     std::cout << "  [P]     Next Period" << std::endl;
+    std::cout << "  [T]     Toggle Home Team Name" << std::endl;
+    std::cout << "  [Y]     Toggle Away Team Name" << std::endl;
     std::cout << "  [C]     Clock Mode (System Time)" << std::endl;
     std::cout << "  [R]     Resume Running" << std::endl;
     std::cout << "  [S]     Stop Clock" << std::endl;
@@ -124,7 +140,7 @@ int main(int argc, char* argv[]) {
             if (!sfmlDisplay->isOpen()) {
                 running = false;
             } else {
-                handleInput(sfmlDisplay->getWindow(), scoreboard);
+                handleInput(sfmlDisplay->getWindow(), scoreboard, homeNameIdx, awayNameIdx);
             }
         }
         
