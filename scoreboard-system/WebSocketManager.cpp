@@ -76,6 +76,14 @@ void WebSocketManager::handleCommand(const std::string& payload) {
         else if (cmd == "addAwayShots") controller.addAwayShots(j.value("delta", 1));
         else if (cmd == "setHomeTeamName") controller.setHomeTeamName(j.at("value").get<std::string>());
         else if (cmd == "setAwayTeamName") controller.setAwayTeamName(j.at("value").get<std::string>());
+        else if (cmd == "setHomePenalty") {
+            controller.setHomePenalty(j.at("index").get<int>(), j.at("value").get<int>(), j.at("player").get<int>());
+        }
+        else if (cmd == "setAwayPenalty") {
+            controller.setAwayPenalty(j.at("index").get<int>(), j.at("value").get<int>(), j.at("player").get<int>());
+        }
+        else if (cmd == "addHomePenalty") controller.addHomePenalty(j.at("value").get<int>(), j.value("player", 0));
+        else if (cmd == "addAwayPenalty") controller.addAwayPenalty(j.at("value").get<int>(), j.value("player", 0));
         else if (cmd == "toggleClock") controller.toggleClock();
         else if (cmd == "resetGame") controller.resetGame();
         else if (cmd == "nextPeriod") controller.nextPeriod();

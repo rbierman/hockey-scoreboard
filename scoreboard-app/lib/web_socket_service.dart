@@ -28,12 +28,14 @@ class WebSocketService {
     });
   }
 
-  void sendCommand(String command, {dynamic value, int? delta}) {
+  void sendCommand(String command, {dynamic value, int? delta, int? index, int? player}) {
     if (_channel == null) return;
     
     final Map<String, dynamic> payload = {'command': command};
     if (value != null) payload['value'] = value;
     if (delta != null) payload['delta'] = delta;
+    if (index != null) payload['index'] = index;
+    if (player != null) payload['player'] = player;
 
     _channel!.sink.add(jsonEncode(payload));
   }

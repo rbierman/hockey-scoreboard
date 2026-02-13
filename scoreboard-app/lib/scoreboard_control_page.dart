@@ -330,23 +330,89 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         Text('Penalties', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () => _wsService?.sendCommand('addHomePenalty', value: 120), // 2 mins
-                child: const Text('Add Home 2:00'),
-              ),
-            ),
+            Expanded(child: _buildTeamPenalties(true)),
             const SizedBox(width: 16),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () => _wsService?.sendCommand('addAwayPenalty', value: 120),
-                child: const Text('Add Away 2:00'),
-              ),
-            ),
+            Expanded(child: _buildTeamPenalties(false)),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildTeamPenalties(bool isHome) {
+    List<Penalty> penalties = isHome ? _state!.homePenalties : _state!.awayPenalties;
+    bool isClockRunning = _state!.clockMode == ClockMode.running;
+
+    return Column(
+      children: List.generate(2, (index) {
+        Penalty p = penalties[index];
+        bool isActive = p.secondsRemaining > 0;
+        return Card(
+          color: isActive ? Colors.red.withOpacity(0.1) : null,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: TextField(
+                        enabled: !isClockRunning,
+                        decoration: InputDecoration(
+                          labelText: 'Player #', 
+                          isDense: true,
+                          helperText: isClockRunning ? 'Stop clock to edit' : null,
+                          helperStyle: const TextStyle(fontSize: 10),
+                        ),
+                        keyboardType: TextInputType.number,
+                        controller: TextEditingController(text: p.playerNumber > 0 ? p.playerNumber.toString() : ''),
+                        onSubmitted: (val) {
+                          int player = int.tryParse(val) ?? 0;
+                          _wsService?.sendCommand(isHome ? 'setHomePenalty' : 'setAwayPenalty', 
+                            index: index, value: p.secondsRemaining, player: player);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        '${(p.secondsRemaining ~/ 60)}:${(p.secondsRemaining % 60).toString().padLeft(2, '0')}',
+                        style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _penaltyTimeButton(isHome, index, p.playerNumber, 120, '2:00', !isClockRunning),
+                    _penaltyTimeButton(isHome, index, p.playerNumber, 300, '5:00', !isClockRunning),
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: isClockRunning ? null : () => _wsService?.sendCommand(isHome ? 'setHomePenalty' : 'setAwayPenalty', 
+                        index: index, value: 0, player: 0),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _penaltyTimeButton(bool isHome, int index, int player, int seconds, String label, bool enabled) {
+    return TextButton(
+      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(40, 30)),
+      onPressed: enabled ? () => _wsService?.sendCommand(isHome ? 'setHomePenalty' : 'setAwayPenalty', 
+        index: index, value: seconds, player: player) : null,
+      child: Text(label, style: TextStyle(fontSize: 12, color: enabled ? null : Colors.grey)),
     );
   }
 }
