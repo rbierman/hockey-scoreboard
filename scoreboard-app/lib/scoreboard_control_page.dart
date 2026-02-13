@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:bonsoir/bonsoir.dart';
 import 'package:flutter/material.dart';
 import 'discovery_dialog.dart';
@@ -24,6 +26,10 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   StreamSubscription<BonsoirDiscoveryEvent>? _subscription;
   StreamSubscription<ConnectionStatus>? _connectionSubscription;
   StreamSubscription<List<Team>>? _teamsSubscription;
+  StreamSubscription<Map<String, dynamic>>? _imageSubscription;
+
+  final Map<String, Uint8List> _imageCache = {};
+
   final StreamController<BonsoirDiscoveryEvent> _discoveryStreamController = StreamController<BonsoirDiscoveryEvent>.broadcast();
   final List<BonsoirService> _discoveredServices = [];
   BonsoirService? _connectedService;
@@ -48,6 +54,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     _discoveryStreamController.close();
     _connectionSubscription?.cancel();
     _teamsSubscription?.cancel();
+    _imageSubscription?.cancel();
     _wsService?.dispose();
     for (var node in _teamFocusNodes.values) {
       node.dispose();
@@ -178,6 +185,26 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         setState(() {
           _teams = teams;
         });
+        // Request images for players that have them and aren't in cache
+        for (var team in teams) {
+          for (var player in team.players) {
+            String key = "${team.name}_${player.number}";
+            if (player.hasImage && !_imageCache.containsKey(key)) {
+              _wsService!.getPlayerImage(team.name, player.number);
+            }
+          }
+        }
+      });
+
+      _imageSubscription = _wsService!.imageStream.listen((imageData) {
+        String team = imageData['team'];
+        int number = imageData['number'];
+        String? base64 = imageData['data'];
+        if (base64 != null) {
+          setState(() {
+            _imageCache["${team}_$number"] = base64Decode(base64);
+          });
+        }
       });
 
       try {
@@ -330,34 +357,73 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
       return;
     }
 
-    print('Showing dialog for team: ${team.name} with ${team.players.length} players');
+    // Filter out placeholder players (number 0, name "New Team")
+    final actualPlayers = team.players.where((p) => !(p.number == 0 && p.name == "New Team")).toList();
+    
+    // Sort players by number
+    actualPlayers.sort((a, b) => a.number.compareTo(b.number));
+
+    print('Showing grid for team: ${team.name} with ${actualPlayers.length} players');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Scored by ($teamName)'),
         content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
+          width: 400, // Fixed width for grid
+          child: GridView.builder(
             shrinkWrap: true,
-            itemCount: team.players.length + 1,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.8,
+            ),
+            itemCount: actualPlayers.length + 1,
             itemBuilder: (context, index) {
-              if (index == team.players.length) {
-                return ListTile(
-                  title: const Text('Unknown / Other'),
+              if (index == actualPlayers.length) {
+                return InkWell(
                   onTap: () {
                     _wsService?.triggerGoal(teamName);
                     Navigator.pop(context);
                   },
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 30,
+                        child: Icon(Icons.help_outline),
+                      ),
+                      SizedBox(height: 4),
+                      Text('Unknown', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
                 );
               }
-              final player = team.players[index];
-              return ListTile(
-                leading: CircleAvatar(child: Text('${player.number}')),
-                title: Text(player.name),
+              
+              final player = actualPlayers[index];
+              Uint8List? imageBytes = _imageCache["${teamName}_${player.number}"];
+
+              return InkWell(
                 onTap: () {
                   _wsService?.triggerGoal(teamName, playerNumber: player.number);
                   Navigator.pop(context);
                 },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
+                      child: imageBytes == null ? Text('${player.number}') : null,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(player.name, 
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text('#${player.number}', style: const TextStyle(fontSize: 10)),
+                  ],
+                ),
               );
             },
           ),
