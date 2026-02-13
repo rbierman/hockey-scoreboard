@@ -15,6 +15,9 @@ add_executable(hockey-scoreboard main.cpp
         ScoreboardState.h
         ScoreboardRenderer.h
         ScoreboardRenderer.cpp
+        GoalCelebrationRenderer.h
+        GoalCelebrationRenderer.cpp
+        IRenderer.h
         KeyboardSimulator.h
         KeyboardSimulator.cpp
         NetworkManager.h

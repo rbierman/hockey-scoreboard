@@ -27,6 +27,15 @@ void ScoreboardController::update() {
 }
 
 void ScoreboardController::update(double deltaTime) {
+    if (state.goalEvent.active) {
+        goalCelebrationTimeRemaining -= deltaTime;
+        if (goalCelebrationTimeRemaining <= 0.0) {
+            state.goalEvent.active = false;
+            goalPlayerImageData.clear();
+            notifyStateChanged();
+        }
+    }
+
     if (state.isClockRunning && (state.clockMode == ClockMode::Game || state.clockMode == ClockMode::Intermission)) {
         int oldSeconds = static_cast<int>(std::ceil(gameTimeRemaining));
         gameTimeRemaining -= deltaTime;
@@ -219,5 +228,14 @@ void ScoreboardController::setHomeTeamName(const std::string& name) {
 
 void ScoreboardController::setAwayTeamName(const std::string& name) {
     state.awayTeamName = name;
+    notifyStateChanged();
+}
+
+void ScoreboardController::triggerGoalCelebration(const std::string& playerName, int playerNumber, const std::vector<uint8_t>& imageData) {
+    state.goalEvent.active = true;
+    state.goalEvent.playerName = playerName;
+    state.goalEvent.playerNumber = playerNumber;
+    goalPlayerImageData = imageData;
+    goalCelebrationTimeRemaining = 5.0; // Show for 5 seconds
     notifyStateChanged();
 }

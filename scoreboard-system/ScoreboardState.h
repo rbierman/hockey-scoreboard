@@ -26,6 +26,13 @@ struct ScoreboardState {
     int currentPeriod = 1;
     std::string homeTeamName = "HOME";
     std::string awayTeamName = "AWAY";
+
+    struct GoalEvent {
+        bool active = false;
+        std::string playerName;
+        int playerNumber = 0;
+    } goalEvent;
+
     ClockMode clockMode = ClockMode::Game;
     bool isClockRunning = false;
 };

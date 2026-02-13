@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'discovery_dialog.dart';
 import 'web_socket_service.dart';
 import 'scoreboard_state.dart';
+import 'team_model.dart';
 import 'team_configuration_page.dart';
 
 class ScoreboardControlPage extends StatefulWidget {
@@ -15,12 +16,14 @@ class ScoreboardControlPage extends StatefulWidget {
 
 class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   ScoreboardState? _state;
+  List<Team> _teams = [];
   WebSocketService? _wsService;
   ConnectionStatus _connectionStatus = ConnectionStatus.disconnected;
 
   BonsoirDiscovery? _discovery;
   StreamSubscription<BonsoirDiscoveryEvent>? _subscription;
   StreamSubscription<ConnectionStatus>? _connectionSubscription;
+  StreamSubscription<List<Team>>? _teamsSubscription;
   final StreamController<BonsoirDiscoveryEvent> _discoveryStreamController = StreamController<BonsoirDiscoveryEvent>.broadcast();
   final List<BonsoirService> _discoveredServices = [];
   BonsoirService? _connectedService;
@@ -41,6 +44,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     _stopDiscovery();
     _discoveryStreamController.close();
     _connectionSubscription?.cancel();
+    _teamsSubscription?.cancel();
     _wsService?.dispose();
     for (var controller in _penaltyControllers.values) {
       controller.dispose();
@@ -164,6 +168,12 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         });
       });
 
+      _teamsSubscription = _wsService!.teamsStream.listen((teams) {
+        setState(() {
+          _teams = teams;
+        });
+      });
+
       try {
         await _wsService!.connect(host, 9000);
         _wsService!.stateStream.listen((newState) {
@@ -171,6 +181,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
             _state = newState;
           });
         });
+        _wsService!.getTeams();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Connecting to ${service.name} ($host:9000)')),
         );
@@ -292,6 +303,61 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
           _buildPeriodControls(),
           const SizedBox(height: 24),
           _buildPenaltySection(),
+        ],
+      ),
+    );
+  }
+
+  void _showGoalPlayerSelection(bool isHome) {
+    String teamName = isHome ? _state!.homeTeamName : _state!.awayTeamName;
+    print('Looking for team: $teamName among ${_teams.length} teams');
+    for (var t in _teams) {
+      print('Available team: ${t.name}');
+    }
+
+    Team? team = _teams.cast<Team?>().firstWhere((t) => t?.name == teamName, orElse: () => null);
+
+    if (team == null || team.players.isEmpty) {
+      print('Team not found or has no players. Triggering generic goal.');
+      // If no roster is configured, just trigger a generic goal
+      _wsService?.triggerGoal(teamName);
+      return;
+    }
+
+    print('Showing dialog for team: ${team.name} with ${team.players.length} players');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Scored by ($teamName)'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: team.players.length + 1,
+            itemBuilder: (context, index) {
+              if (index == team.players.length) {
+                return ListTile(
+                  title: const Text('Unknown / Other'),
+                  onTap: () {
+                    _wsService?.triggerGoal(teamName);
+                    Navigator.pop(context);
+                  },
+                );
+              }
+              final player = team.players[index];
+              return ListTile(
+                leading: CircleAvatar(child: Text('${player.number}')),
+                title: Text(player.name),
+                onTap: () {
+                  _wsService?.triggerGoal(teamName, playerNumber: player.number);
+                  Navigator.pop(context);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         ],
       ),
     );
@@ -462,6 +528,16 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
             IconButton(
               onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeScore' : 'addAwayScore', delta: 1),
               icon: const Icon(Icons.add)
+            ),
+            const SizedBox(width: 4),
+            ElevatedButton(
+              onPressed: () => _showGoalPlayerSelection(isHome),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              child: const Text('GOAL', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),

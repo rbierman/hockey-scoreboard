@@ -37,6 +37,9 @@ public:
     void nextPeriod();
     void resetGame();
 
+    void triggerGoalCelebration(const std::string& playerName, int playerNumber, const std::vector<uint8_t>& imageData = {});
+    const std::vector<uint8_t>& getGoalPlayerImageData() const { return goalPlayerImageData; }
+
 private:
     void notifyStateChanged();
 
@@ -44,5 +47,7 @@ private:
     StateChangeListener onStateChanged;
 
     double gameTimeRemaining = 0.0;
+    double goalCelebrationTimeRemaining = 0.0;
+    std::vector<uint8_t> goalPlayerImageData;
     std::chrono::steady_clock::time_point lastUpdateTime;
 };

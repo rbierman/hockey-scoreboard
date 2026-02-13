@@ -60,6 +60,7 @@ class WebSocketService {
           if (data.containsKey('type') && data['type'] == 'teams') {
             final List<dynamic> teamsJson = data['teams'];
             final teams = teamsJson.map((e) => Team.fromJson(e as Map<String, dynamic>)).toList();
+            print('WebSocketService: Received ${teams.length} teams');
             _teamsController.add(teams);
           } else if (data.containsKey('type') && data['type'] == 'image') {
             _imageController.add(data);
@@ -166,6 +167,13 @@ class WebSocketService {
 
   void getTeams() {
     sendCommand('getTeams');
+  }
+
+  void triggerGoal(String teamName, {int? playerNumber}) {
+    sendCommand('triggerGoal', extraArgs: {
+      'team': teamName,
+      'playerNumber': playerNumber,
+    });
   }
 
   void dispose() {

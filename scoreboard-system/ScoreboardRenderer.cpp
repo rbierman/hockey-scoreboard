@@ -3,8 +3,8 @@
 #include <iomanip>
 #include <sstream>
 
-ScoreboardRenderer::ScoreboardRenderer(DoubleFramebuffer& dfb, const ResourceLocator& resourceLocator)
-    : dfb(dfb), _resourceLocator(resourceLocator) {
+ScoreboardRenderer::ScoreboardRenderer(DoubleFramebuffer& dfb, const ResourceLocator& resourceLocator, const ScoreboardState& state)
+    : dfb(dfb), _resourceLocator(resourceLocator), state(state) {
     loadFont((_resourceLocator.getFontsDirPath() + "/digital-7 (mono).ttf").c_str());
 }
 
@@ -21,9 +21,10 @@ void ScoreboardRenderer::loadFont(const char* path) {
     periodFont.createFromFace(fontFace, 28.0f); // Smaller font for period indicator
     labelFont.createFromFace(fontFace, 20.0f); // Even smaller font for labels
     teamNameFont.createFromFace(fontFace, 28.0f); // Team name font
+    goalFont.createFromFace(fontFace, 60.0f); // Large font for GOAL
 }
 
-void ScoreboardRenderer::render(const ScoreboardState& state) const {
+void ScoreboardRenderer::render() const {
     const int w = dfb.getWidth();
     const int h = dfb.getHeight();
 

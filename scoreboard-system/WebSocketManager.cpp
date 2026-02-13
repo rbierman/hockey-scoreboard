@@ -163,6 +163,32 @@ void WebSocketManager::handleMessage(std::shared_ptr<ix::ConnectionState> connec
                 }
                 webSocket.send(response.dump());
                 return;
+            } else if (cmd == "triggerGoal") {
+                std::string teamName = j.at("team").get<std::string>();
+                int playerNumber = j.value("playerNumber", 0);
+                
+                // Increment score
+                if (teamName == controller.getState().homeTeamName) {
+                    controller.addHomeScore(1);
+                } else {
+                    controller.addAwayScore(1);
+                }
+
+                if (playerNumber > 0) {
+                    const Team* team = teamManager.getTeam(teamName);
+                    if (team) {
+                        for (const auto& player : team->players) {
+                            if (player.number == playerNumber) {
+                                auto imageData = teamManager.getPlayerImage(teamName, playerNumber);
+                                controller.triggerGoalCelebration(player.name, playerNumber, imageData);
+                                return;
+                            }
+                        }
+                    }
+                }
+                // If no player found or playerNumber is 0, still show a generic goal
+                controller.triggerGoalCelebration("", 0);
+                return;
             }
             
             handleCommand(msg->str);

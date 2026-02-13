@@ -9,6 +9,8 @@
 #include "display/ColorLightDisplay.h"
 #include "ScoreboardController.h"
 #include "ScoreboardRenderer.h"
+#include "GoalCelebrationRenderer.h"
+#include "IRenderer.h"
 #include "KeyboardSimulator.h"
 #include "NetworkManager.h"
 #include "WebSocketManager.h"
@@ -59,7 +61,8 @@ int main(int argc, char* argv[]) {
     wsPtr = &ws;
     ws.start();
 
-    ScoreboardRenderer renderer(dfb, resourceLocator);
+    ScoreboardRenderer scoreboardRenderer(dfb, resourceLocator, scoreboard.getState());
+    GoalCelebrationRenderer goalRenderer(dfb, resourceLocator, scoreboard);
     KeyboardSimulator simulator(scoreboard);
     NetworkManager network(8080);
     network.start();
@@ -90,7 +93,11 @@ int main(int argc, char* argv[]) {
         scoreboard.update();
 
         // --- RENDER ---
-        renderer.render(scoreboard.getState());
+        if (scoreboard.getState().goalEvent.active) {
+            goalRenderer.render();
+        } else {
+            scoreboardRenderer.render();
+        }
 
         // --- DISPLAY ---
         dfb.swap();
