@@ -636,8 +636,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Left placeholder to balance the GOAL button on the right
-            _buildGoalButtonPlaceholder(),
             IconButton(
               onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeScore' : 'addAwayScore', delta: -1),
               icon: const Icon(Icons.remove)
@@ -647,24 +645,24 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
               onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeScore' : 'addAwayScore', delta: 1),
               icon: const Icon(Icons.add)
             ),
-            const SizedBox(width: 4),
-            ElevatedButton(
-              onPressed: isValidTeam ? () => _showGoalPlayerSelection(isHome) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isValidTeam ? Colors.red : Colors.grey.shade800,
-                foregroundColor: isValidTeam ? Colors.white : Colors.grey.shade500,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              child: const Text('GOAL', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
+        ElevatedButton(
+          onPressed: isValidTeam ? () => _showGoalPlayerSelection(isHome) : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isValidTeam ? Colors.red : Colors.grey.shade800,
+            foregroundColor: isValidTeam ? Colors.white : Colors.grey.shade500,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            minimumSize: const Size(100, 36),
+          ),
+          child: const Text('GOAL', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 16),
         Text('Shots', style: Theme.of(context).textTheme.titleMedium),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildGoalButtonPlaceholder(),
             IconButton(
               onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeShots' : 'addAwayShots', delta: -1),
               icon: const Icon(Icons.remove)
@@ -674,8 +672,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
               onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeShots' : 'addAwayShots', delta: 1),
               icon: const Icon(Icons.add)
             ),
-            const SizedBox(width: 4),
-            _buildGoalButtonPlaceholder(),
           ],
         ),
       ],
@@ -798,26 +794,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
           index: index, value: seconds, player: player);
       } : null,
       child: Text(label, style: TextStyle(fontSize: 12, color: enabled ? null : Colors.grey)),
-    );
-  }
-
-  Widget _buildGoalButtonPlaceholder() {
-    return Opacity(
-      opacity: 0,
-      child: IgnorePointer(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ElevatedButton(
-              onPressed: null,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-              child: const Text('GOAL', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
