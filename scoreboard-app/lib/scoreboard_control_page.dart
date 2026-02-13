@@ -216,13 +216,8 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
           });
         });
         _wsService!.getTeams();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Connecting to ${service.name} ($host:$port)')),
-        );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to initialize connection on $host:${service.port}')),
-        );
+        print('Connection error: $e');
       }
     }
   }
@@ -233,6 +228,21 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
       appBar: AppBar(
         title: const Text('ScoreMaster'),
         actions: [
+          if (_connectedService != null)
+            IconButton(
+              icon: const Icon(Icons.power_settings_new),
+              tooltip: 'Disconnect',
+              onPressed: () {
+                setState(() {
+                  _wsService?.dispose();
+                  _wsService = null;
+                  _connectedService = null;
+                  _state = null;
+                  _teams = [];
+                  _imageCache.clear();
+                });
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.people),
             tooltip: 'Configure Teams',
@@ -244,10 +254,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
                 ),
               );
             },
-          ),
-          IconButton(
-            icon: Icon(_connectedService == null ? Icons.link_off : Icons.link),
-            onPressed: _showDiscoveryDialog,
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -297,25 +303,58 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   }
 
   Widget _buildDiscoveryBody() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(_isDiscoverySupported ? Icons.search : Icons.error_outline, 
-               size: 64, 
-               color: _isDiscoverySupported ? Colors.grey : Colors.red),
-          const SizedBox(height: 16),
-          Text(_isDiscoverySupported 
-              ? 'Search for a scoreboard...' 
-              : 'Discovery Error: $_discoveryError'),
-          const SizedBox(height: 16),
-          if (_isDiscoverySupported)
-            ElevatedButton(
-              onPressed: _showDiscoveryDialog,
-              child: const Text('Browse Scoreboards'),
-            ),
-        ],
-      ),
+    if (!_isDiscoverySupported) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Discovery Error: $_discoveryError'),
+          ],
+        ),
+      );
+    }
+
+    if (_discoveredServices.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 24),
+            Text('Searching for scoreboards...', style: TextStyle(fontSize: 18)),
+            SizedBox(height: 8),
+            Text('Ensure the scoreboard-system is running on the same network.', 
+              style: TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('Select a Scoreboard:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: _discoveredServices.length,
+            itemBuilder: (context, index) {
+              final service = _discoveredServices[index];
+              return ListTile(
+                leading: const Icon(Icons.sports_hockey, color: Colors.blue),
+                title: Text(service.name),
+                subtitle: Text(service.toJson()['service.host'] ?? 'Resolving...'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _connectToService(service),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -464,27 +503,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         ],
-      ),
-    );
-  }
-
-  void _showDiscoveryDialog() {
-    if (_discovery == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Discovery service is not ready')),
-      );
-      return;
-    }
-    showDialog(
-      context: context,
-      builder: (context) => ScoreboardDiscoveryDialog(
-        discovery: _discovery!,
-        eventStream: _discoveryStreamController.stream,
-        discoveredServices: _discoveredServices,
-        onServiceSelected: (service) {
-          _connectToService(service);
-          Navigator.pop(context);
-        },
       ),
     );
   }
