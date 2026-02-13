@@ -3,7 +3,7 @@
 #include <iostream>
 
 const std::vector<std::string> KeyboardSimulator::TEAM_NAMES = {
-    "MAMBAS", "BREAKERS", "EAGLES", "TIGERS", "SHARKS", "WOLVES", "LIONS", "STARS"
+    "MAMBAS", "BREAKERS", "EAGLES", "TIGERS", "SHARKS", "WOLVES", "LIONS", "STARS", "CANUCKS", "PANTHERS"
 };
 
 KeyboardSimulator::KeyboardSimulator(ScoreboardController& controller)
