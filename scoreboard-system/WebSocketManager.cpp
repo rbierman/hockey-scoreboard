@@ -5,8 +5,8 @@
 
 using json = nlohmann::json;
 
-WebSocketManager::WebSocketManager(int port, ScoreboardController& controller)
-    : port(port), controller(controller), server(port, "0.0.0.0") {
+WebSocketManager::WebSocketManager(int port, ScoreboardController& controller, TeamManager& teamManager)
+    : port(port), controller(controller), teamManager(teamManager), server(port, "0.0.0.0") {
     
     server.setOnConnectionCallback([this](std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
         auto ws = webSocket.lock();
@@ -50,12 +50,43 @@ void WebSocketManager::broadcastState(const ScoreboardState& state) {
 
 void WebSocketManager::handleMessage(std::shared_ptr<ix::ConnectionState> connectionState, ix::WebSocket & webSocket, const ix::WebSocketMessagePtr & msg) {
     if (msg->type == ix::WebSocketMessageType::Message) {
-        handleCommand(msg->str);
+        try {
+            json j = json::parse(msg->str);
+            std::string cmd = j.value("command", "");
+            
+            if (cmd == "getTeams") {
+                json response;
+                response["type"] = "teams";
+                json teamsList = json::array();
+                for (const auto& name : teamManager.getTeamNames()) {
+                    const Team* t = teamManager.getTeam(name);
+                    if (t) teamsList.push_back(*t);
+                }
+                response["teams"] = teamsList;
+                webSocket.send(response.dump());
+                return;
+            }
+            
+            handleCommand(msg->str);
+        } catch (const std::exception& e) {
+            std::cerr << "Error handling message: " << e.what() << std::endl;
+        }
     } else if (msg->type == ix::WebSocketMessageType::Open) {
         std::cout << "New WebSocket connection" << std::endl;
         // Send initial state
         json j = stateToJson(controller.getState());
         webSocket.send(j.dump());
+        
+        // Also send teams on connect
+        json teamsResponse;
+        teamsResponse["type"] = "teams";
+        json teamsList = json::array();
+        for (const auto& name : teamManager.getTeamNames()) {
+            const Team* t = teamManager.getTeam(name);
+            if (t) teamsList.push_back(*t);
+        }
+        teamsResponse["teams"] = teamsList;
+        webSocket.send(teamsResponse.dump());
     } else if (msg->type == ix::WebSocketMessageType::Close) {
         std::cout << "WebSocket connection closed" << std::endl;
     } else if (msg->type == ix::WebSocketMessageType::Error) {
@@ -95,6 +126,59 @@ void WebSocketManager::handleCommand(const std::string& payload) {
             if (mode == "Game") controller.setClockMode(ClockMode::Game);
             else if (mode == "Intermission") controller.setClockMode(ClockMode::Intermission);
             else if (mode == "TimeOfDay") controller.setClockMode(ClockMode::TimeOfDay);
+        }
+        else if (cmd == "addOrUpdatePlayer") {
+            Player p;
+            p.name = j.at("name").get<std::string>();
+            p.number = j.at("number").get<int>();
+            teamManager.addOrUpdatePlayer(j.at("team").get<std::string>(), p);
+            
+            // Broadcast teams update?
+            json response;
+            response["type"] = "teams";
+            json teamsList = json::array();
+            for (const auto& name : teamManager.getTeamNames()) {
+                const Team* t = teamManager.getTeam(name);
+                if (t) teamsList.push_back(*t);
+            }
+            response["teams"] = teamsList;
+            std::string respPayload = response.dump();
+            for (auto&& client : server.getClients()) {
+                client->send(respPayload);
+            }
+        }
+        else if (cmd == "removePlayer") {
+            teamManager.removePlayer(j.at("team").get<std::string>(), j.at("number").get<int>());
+            
+            // Broadcast teams update
+            json response;
+            response["type"] = "teams";
+            json teamsList = json::array();
+            for (const auto& name : teamManager.getTeamNames()) {
+                const Team* t = teamManager.getTeam(name);
+                if (t) teamsList.push_back(*t);
+            }
+            response["teams"] = teamsList;
+            std::string respPayload = response.dump();
+            for (auto&& client : server.getClients()) {
+                client->send(respPayload);
+            }
+        }
+        else if (cmd == "deleteTeam") {
+            teamManager.deleteTeam(j.at("name").get<std::string>());
+             // Broadcast teams update
+            json response;
+            response["type"] = "teams";
+            json teamsList = json::array();
+            for (const auto& name : teamManager.getTeamNames()) {
+                const Team* t = teamManager.getTeam(name);
+                if (t) teamsList.push_back(*t);
+            }
+            response["teams"] = teamsList;
+            std::string respPayload = response.dump();
+            for (auto&& client : server.getClients()) {
+                client->send(respPayload);
+            }
         }
     } catch (const std::exception& e) {
         std::cerr << "Error parsing command JSON: " << e.what() << std::endl;

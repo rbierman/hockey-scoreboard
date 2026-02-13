@@ -9,6 +9,7 @@ public:
     ResourceLocator(); // Modified constructor
 
     std::string getFontsDirPath() const;
+    std::string getDataDirPath() const;
 
 private:
     std::string _basePath;

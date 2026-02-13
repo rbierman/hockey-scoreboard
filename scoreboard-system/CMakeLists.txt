@@ -24,7 +24,9 @@ add_executable(hockey-scoreboard main.cpp
         CommandLineArgs.h
         CommandLineArgs.cpp
         ResourceLocator.h
-        ResourceLocator.cpp)
+        ResourceLocator.cpp
+        TeamManager.h
+        TeamManager.cpp)
 
 find_package(ixwebsocket CONFIG REQUIRED)
 target_link_libraries(hockey-scoreboard PRIVATE ixwebsocket::ixwebsocket)

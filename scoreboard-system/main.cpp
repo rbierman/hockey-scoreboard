@@ -12,6 +12,7 @@
 #include "KeyboardSimulator.h"
 #include "NetworkManager.h"
 #include "WebSocketManager.h"
+#include "TeamManager.h"
 #include "CommandLineArgs.h"
 #include "ResourceLocator.h"
 
@@ -46,6 +47,7 @@ int main(int argc, char* argv[]) {
     }
 
     ResourceLocator resourceLocator;
+    TeamManager teamManager(resourceLocator.getDataDirPath());
     
     WebSocketManager* wsPtr = nullptr;
     
@@ -53,7 +55,7 @@ int main(int argc, char* argv[]) {
         if (wsPtr) wsPtr->broadcastState(state);
     });
 
-    WebSocketManager ws(9000, scoreboard);
+    WebSocketManager ws(9000, scoreboard, teamManager);
     wsPtr = &ws;
     ws.start();
 

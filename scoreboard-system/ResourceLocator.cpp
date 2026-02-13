@@ -16,3 +16,7 @@ ResourceLocator::ResourceLocator() {
 std::string ResourceLocator::getFontsDirPath() const {
     return _basePath + "/fonts";
 }
+
+std::string ResourceLocator::getDataDirPath() const {
+    return _basePath + "/data";
+}
