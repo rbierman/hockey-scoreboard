@@ -1,0 +1,11 @@
+{
+  "name": "hockey-scoreboard",
+  "version": "1.0.0",
+  "dependencies": [
+    "sfml",
+    "blend2d",
+    "libcpplocate",
+    "ixwebsocket",
+    "nlohmann-json"
+  ]
+}

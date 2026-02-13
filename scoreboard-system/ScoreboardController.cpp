@@ -3,7 +3,7 @@
 #include <ctime>
 #include <cmath>
 
-ScoreboardController::ScoreboardController() {
+ScoreboardController::ScoreboardController(StateChangeListener listener) : onStateChanged(listener) {
     // Initialize high-res timer from state
     gameTimeRemaining = state.timeMinutes * 60.0 + state.timeSeconds;
     lastUpdateTime = std::chrono::steady_clock::now();
@@ -11,6 +11,12 @@ ScoreboardController::ScoreboardController() {
 
 const ScoreboardState& ScoreboardController::getState() const {
     return state;
+}
+
+void ScoreboardController::notifyStateChanged() {
+    if (onStateChanged) {
+        onStateChanged(state);
+    }
 }
 
 void ScoreboardController::update() {
@@ -50,18 +56,31 @@ void ScoreboardController::update(double deltaTime) {
 
         state.timeMinutes = newSeconds / 60;
         state.timeSeconds = newSeconds % 60;
+        
+        // We might want to notify every second if needed, but for now we'll notify in update loop if state changes significantly or periodically
+        // For efficiency, maybe only notify when time changes (every second)
+        if (newSeconds != oldSeconds) {
+            notifyStateChanged();
+        }
 
     } else if (state.clockMode == ClockMode::Clock) {
+        int oldSec = state.timeSeconds;
         auto now = std::chrono::system_clock::now();
         std::time_t now_c = std::chrono::system_clock::to_time_t(now);
         std::tm* now_tm = std::localtime(&now_c);
         state.timeMinutes = now_tm->tm_hour;
-        state.timeSeconds = now_tm->tm_min;
+        state.timeSeconds = now_tm->tm_min; // Wait, wait, this should be minutes and seconds for display usually, but here it's hour/min
+        if (state.timeSeconds != oldSec) {
+            notifyStateChanged();
+        }
     }
 }
 
 void ScoreboardController::setClockMode(ClockMode mode) {
-    state.clockMode = mode;
+    if (state.clockMode != mode) {
+        state.clockMode = mode;
+        notifyStateChanged();
+    }
 }
 
 void ScoreboardController::toggleClock() {
@@ -70,26 +89,31 @@ void ScoreboardController::toggleClock() {
     } else {
         state.clockMode = ClockMode::Running;
     }
+    notifyStateChanged();
 }
 
 void ScoreboardController::addHomeScore(int delta) {
     state.homeScore += delta;
     if (state.homeScore < 0) state.homeScore = 0;
+    notifyStateChanged();
 }
 
 void ScoreboardController::addAwayScore(int delta) {
     state.awayScore += delta;
     if (state.awayScore < 0) state.awayScore = 0;
+    notifyStateChanged();
 }
 
 void ScoreboardController::addHomeShots(int delta) {
     state.homeShots += delta;
     if (state.homeShots < 0) state.homeShots = 0;
+    notifyStateChanged();
 }
 
 void ScoreboardController::addAwayShots(int delta) {
     state.awayShots += delta;
     if (state.awayShots < 0) state.awayShots = 0;
+    notifyStateChanged();
 }
 
 void ScoreboardController::addHomePenalty(int seconds, int playerNumber) {
@@ -105,6 +129,7 @@ void ScoreboardController::addAwayPenalty(int seconds, int playerNumber) {
 void ScoreboardController::nextPeriod() {
     state.currentPeriod++;
     if (state.currentPeriod > 3) state.currentPeriod = 1;
+    notifyStateChanged();
 }
 
 void ScoreboardController::resetGame() {
@@ -125,34 +150,41 @@ void ScoreboardController::resetGame() {
         state.awayPenalties[i].secondsRemaining = 0;
         state.awayPenalties[i].playerNumber = 0;
     }
+    notifyStateChanged();
 }
 
 void ScoreboardController::setHomeScore(int score) {
     state.homeScore = score;
+    notifyStateChanged();
 }
 
 void ScoreboardController::setAwayScore(int score) {
     state.awayScore = score;
+    notifyStateChanged();
 }
 
 void ScoreboardController::setTime(int minutes, int seconds) {
     state.timeMinutes = minutes;
     state.timeSeconds = seconds;
     gameTimeRemaining = minutes * 60.0 + seconds;
+    notifyStateChanged();
 }
 
 void ScoreboardController::setHomeShots(int shots) {
     state.homeShots = shots;
+    notifyStateChanged();
 }
 
 void ScoreboardController::setAwayShots(int shots) {
     state.awayShots = shots;
+    notifyStateChanged();
 }
 
 void ScoreboardController::setHomePenalty(int index, int seconds, int playerNumber) {
     if (index >= 0 && index < 2) {
         state.homePenalties[index].secondsRemaining = seconds;
         state.homePenalties[index].playerNumber = playerNumber;
+        notifyStateChanged();
     }
 }
 
@@ -160,17 +192,21 @@ void ScoreboardController::setAwayPenalty(int index, int seconds, int playerNumb
     if (index >= 0 && index < 2) {
         state.awayPenalties[index].secondsRemaining = seconds;
         state.awayPenalties[index].playerNumber = playerNumber;
+        notifyStateChanged();
     }
 }
 
 void ScoreboardController::setCurrentPeriod(int period) {
     state.currentPeriod = period;
+    notifyStateChanged();
 }
 
 void ScoreboardController::setHomeTeamName(const std::string& name) {
     state.homeTeamName = name;
+    notifyStateChanged();
 }
 
 void ScoreboardController::setAwayTeamName(const std::string& name) {
     state.awayTeamName = name;
+    notifyStateChanged();
 }

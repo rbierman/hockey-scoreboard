@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:bonsoir/bonsoir.dart';
 import 'package:flutter/material.dart';
 import 'discovery_dialog.dart';
+import 'web_socket_service.dart';
+import 'scoreboard_state.dart';
 
 class ScoreboardControlPage extends StatefulWidget {
   const ScoreboardControlPage({super.key});
@@ -11,14 +13,8 @@ class ScoreboardControlPage extends StatefulWidget {
 }
 
 class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
-  int homeScore = 0;
-  int awayScore = 0;
-  int homeShots = 0;
-  int awayShots = 0;
-  String homeTeam = "HOME";
-  String awayTeam = "AWAY";
-  String clockMode = "Stopped";
-  int period = 1;
+  ScoreboardState? _state;
+  WebSocketService? _wsService;
 
   BonsoirDiscovery? _discovery;
   StreamSubscription<BonsoirDiscoveryEvent>? _subscription;
@@ -38,6 +34,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   void dispose() {
     _stopDiscovery();
     _discoveryStreamController.close();
+    _wsService?.dispose();
     super.dispose();
   }
 
@@ -53,12 +50,9 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
           
           final service = event.service;
           if (service == null) return;
-          debugPrint('[Main Discovery] Event: ${event.runtimeType} for ${service.name}');
-          debugPrint('[Main Discovery] Service JSON: ${service.toJson()}');
 
           switch (event) {
             case BonsoirDiscoveryServiceFoundEvent():
-              debugPrint('[Main Discovery] Found service: ${service.name}. Resolved: ${service.toJson()['service.host'] != null}');
               setState(() {
                 if (!_discoveredServices.any((s) => s.name == service.name)) {
                   _discoveredServices.add(service);
@@ -67,7 +61,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
               service.resolve(_discovery!.serviceResolver);
               break;
             case BonsoirDiscoveryServiceResolvedEvent():
-              debugPrint('[Main Discovery] Resolved service: ${service.name}. Host: ${service.toJson()['service.host']}');
               setState(() {
                 int index = _discoveredServices.indexWhere((s) => s.name == service.name);
                 if (index != -1) {
@@ -80,6 +73,8 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
                 _discoveredServices.removeWhere((s) => s.name == service.name);
                 if (_connectedService?.name == service.name) {
                   _connectedService = null;
+                  _wsService?.dispose();
+                  _wsService = null;
                 }
               });
               break;
@@ -99,7 +94,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         _isDiscoverySupported = false;
         _discoveryError = e.toString();
       });
-      debugPrint('Discovery error: $e');
     }
   }
 
@@ -108,35 +102,33 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     await _discovery?.stop();
   }
 
-  void _connectToService(BonsoirService service) {
+  void _connectToService(BonsoirService service) async {
     setState(() {
       _connectedService = service;
     });
+    
     final json = service.toJson();
-    String host = json['service.host'] ?? "Unknown";
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Connected to ${service.name} ($host)')),
-    );
-  }
-
-  void _updateScore(bool isHome, int delta) {
-    setState(() {
-      if (isHome) {
-        homeScore = (homeScore + delta).clamp(0, 99);
-      } else {
-        awayScore = (awayScore + delta).clamp(0, 99);
+    String? host = json['service.host'];
+    
+    if (host != null) {
+      _wsService?.dispose();
+      _wsService = WebSocketService();
+      try {
+        await _wsService!.connect(host, 9000);
+        _wsService!.stateStream.listen((newState) {
+          setState(() {
+            _state = newState;
+          });
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Connected to ${service.name} ($host:9000)')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to connect to WebSocket on $host:9000')),
+        );
       }
-    });
-  }
-
-  void _updateShots(bool isHome, int delta) {
-    setState(() {
-      if (isHome) {
-        homeShots = (homeShots + delta).clamp(0, 99);
-      } else {
-        awayShots = (awayShots + delta).clamp(0, 99);
-      }
-    });
+    }
   }
 
   @override
@@ -151,16 +143,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                homeScore = 0;
-                awayScore = 0;
-                homeShots = 0;
-                awayShots = 0;
-                clockMode = "Stopped";
-                period = 1;
-              });
-            },
+            onPressed: () => _wsService?.sendCommand('resetGame'),
           ),
         ],
       ),
@@ -185,27 +168,29 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
               ],
             ),
           )
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildClockControls(),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(child: _buildTeamSection(true)),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildTeamSection(false)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildPeriodControls(),
-                const SizedBox(height: 24),
-                _buildPenaltySection(),
-              ],
+        : _state == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildClockControls(),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(child: _buildTeamSection(true)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildTeamSection(false)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildPeriodControls(),
+                  const SizedBox(height: 24),
+                  _buildPenaltySection(),
+                ],
+              ),
             ),
-          ),
     );
   }
 
@@ -225,30 +210,27 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   }
 
   Widget _buildClockControls() {
+    String modeStr = _state!.clockMode.toString().split('.').last;
+    String timeStr = '${_state!.timeMinutes.toString().padLeft(2, '0')}:${_state!.timeSeconds.toString().padLeft(2, '0')}';
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text('Clock Mode: $clockMode', style: Theme.of(context).textTheme.headlineSmall),
+            Text(timeStr, style: Theme.of(context).textTheme.displayMedium?.copyWith(fontFamily: 'monospace')),
+            Text('Mode: $modeStr', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () => setState(() => clockMode = "Running"),
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Start'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green.withOpacity(0.2)),
+                  onPressed: () => _wsService?.sendCommand('toggleClock'),
+                  icon: Icon(_state!.clockMode == ClockMode.running ? Icons.pause : Icons.play_arrow),
+                  label: Text(_state!.clockMode == ClockMode.running ? 'Pause' : 'Start'),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () => setState(() => clockMode = "Stopped"),
-                  icon: const Icon(Icons.stop),
-                  label: const Text('Stop'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red.withOpacity(0.2)),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => setState(() => clockMode = "Clock"),
+                  onPressed: () => _wsService?.sendCommand('setClockMode', value: 'Clock'),
                   icon: const Icon(Icons.access_time),
                   label: const Text('Time'),
                 ),
@@ -261,23 +243,27 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   }
 
   Widget _buildTeamSection(bool isHome) {
+    int score = isHome ? _state!.homeScore : _state!.awayScore;
+    int shots = isHome ? _state!.homeShots : _state!.awayShots;
+    String teamName = isHome ? _state!.homeTeamName : _state!.awayTeamName;
+
     return Column(
       children: [
-        TextField(
-          decoration: InputDecoration(
-            labelText: isHome ? 'Home Team' : 'Away Team',
-            border: const OutlineInputBorder(),
-          ),
-          onChanged: (val) => setState(() => isHome ? homeTeam = val : awayTeam = val),
-        ),
+        Text(teamName, style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center),
         const SizedBox(height: 16),
         Text('Score', style: Theme.of(context).textTheme.titleMedium),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            IconButton(onPressed: () => _updateScore(isHome, -1), icon: const Icon(Icons.remove)),
-            Text('${isHome ? homeScore : awayScore}', style: Theme.of(context).textTheme.headlineMedium),
-            IconButton(onPressed: () => _updateScore(isHome, 1), icon: const Icon(Icons.add)),
+            IconButton(
+              onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeScore' : 'addAwayScore', delta: -1),
+              icon: const Icon(Icons.remove)
+            ),
+            Text('$score', style: Theme.of(context).textTheme.headlineMedium),
+            IconButton(
+              onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeScore' : 'addAwayScore', delta: 1),
+              icon: const Icon(Icons.add)
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -285,9 +271,15 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            IconButton(onPressed: () => _updateShots(isHome, -1), icon: const Icon(Icons.remove)),
-            Text('${isHome ? homeShots : awayShots}', style: Theme.of(context).textTheme.titleMedium),
-            IconButton(onPressed: () => _updateShots(isHome, 1), icon: const Icon(Icons.add)),
+            IconButton(
+              onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeShots' : 'addAwayShots', delta: -1),
+              icon: const Icon(Icons.remove)
+            ),
+            Text('$shots', style: Theme.of(context).textTheme.titleMedium),
+            IconButton(
+              onPressed: () => _wsService?.sendCommand(isHome ? 'addHomeShots' : 'addAwayShots', delta: 1),
+              icon: const Icon(Icons.add)
+            ),
           ],
         ),
       ],
@@ -301,18 +293,10 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Period: $period', style: Theme.of(context).textTheme.titleLarge),
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => setState(() => period = (period > 1) ? period - 1 : 1),
-                  icon: const Icon(Icons.remove),
-                ),
-                IconButton(
-                  onPressed: () => setState(() => period = (period < 4) ? period + 1 : 4),
-                  icon: const Icon(Icons.add),
-                ),
-              ],
+            Text('Period: ${_state!.currentPeriod}', style: Theme.of(context).textTheme.titleLarge),
+            ElevatedButton(
+              onPressed: () => _wsService?.sendCommand('nextPeriod'),
+              child: const Text('Next Period'),
             ),
           ],
         ),
@@ -330,15 +314,15 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
           children: [
             Expanded(
               child: ElevatedButton(
-                onPressed: () {},
-                child: const Text('Add Home Penalty'),
+                onPressed: () => _wsService?.sendCommand('addHomePenalty', value: 120), // 2 mins
+                child: const Text('Add Home 2:00'),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: () {},
-                child: const Text('Add Away Penalty'),
+                onPressed: () => _wsService?.sendCommand('addAwayPenalty', value: 120),
+                child: const Text('Add Away 2:00'),
               ),
             ),
           ],

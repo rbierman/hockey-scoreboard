@@ -19,10 +19,18 @@ add_executable(hockey-scoreboard main.cpp
         KeyboardSimulator.cpp
         NetworkManager.h
         NetworkManager.cpp
+        WebSocketManager.h
+        WebSocketManager.cpp
         CommandLineArgs.h
         CommandLineArgs.cpp
         ResourceLocator.h
         ResourceLocator.cpp)
+
+find_package(ixwebsocket CONFIG REQUIRED)
+target_link_libraries(hockey-scoreboard PRIVATE ixwebsocket::ixwebsocket)
+
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(hockey-scoreboard PRIVATE nlohmann_json::nlohmann_json)
 
 find_package(SFML COMPONENTS Network Graphics Window Audio System CONFIG REQUIRED)
 target_link_libraries(hockey-scoreboard PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)

@@ -11,6 +11,7 @@
 #include "ScoreboardRenderer.h"
 #include "KeyboardSimulator.h"
 #include "NetworkManager.h"
+#include "WebSocketManager.h"
 #include "CommandLineArgs.h"
 #include "ResourceLocator.h"
 
@@ -45,7 +46,17 @@ int main(int argc, char* argv[]) {
     }
 
     ResourceLocator resourceLocator;
-    ScoreboardController scoreboard;
+    
+    WebSocketManager* wsPtr = nullptr;
+    
+    ScoreboardController scoreboard([&wsPtr](const ScoreboardState& state) {
+        if (wsPtr) wsPtr->broadcastState(state);
+    });
+
+    WebSocketManager ws(9000, scoreboard);
+    wsPtr = &ws;
+    ws.start();
+
     ScoreboardRenderer renderer(dfb, resourceLocator);
     KeyboardSimulator simulator(scoreboard);
     NetworkManager network(8080);

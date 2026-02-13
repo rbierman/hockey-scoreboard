@@ -2,11 +2,13 @@
 
 #include <string>
 #include <chrono>
+#include <functional>
 #include "ScoreboardState.h"
 
 class ScoreboardController {
 public:
-    ScoreboardController();
+    using StateChangeListener = std::function<void(const ScoreboardState&)>;
+    ScoreboardController(StateChangeListener listener = nullptr);
 
     const ScoreboardState& getState() const;
 
@@ -36,7 +38,10 @@ public:
     void resetGame();
 
 private:
+    void notifyStateChanged();
+
     ScoreboardState state;
+    StateChangeListener onStateChanged;
 
     double gameTimeRemaining = 0.0;
     std::chrono::steady_clock::time_point lastUpdateTime;
