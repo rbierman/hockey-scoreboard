@@ -15,9 +15,11 @@ class ScoreboardControlPage extends StatefulWidget {
 class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   ScoreboardState? _state;
   WebSocketService? _wsService;
+  ConnectionStatus _connectionStatus = ConnectionStatus.disconnected;
 
   BonsoirDiscovery? _discovery;
   StreamSubscription<BonsoirDiscoveryEvent>? _subscription;
+  StreamSubscription<ConnectionStatus>? _connectionSubscription;
   final StreamController<BonsoirDiscoveryEvent> _discoveryStreamController = StreamController<BonsoirDiscoveryEvent>.broadcast();
   final List<BonsoirService> _discoveredServices = [];
   BonsoirService? _connectedService;
@@ -34,6 +36,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   void dispose() {
     _stopDiscovery();
     _discoveryStreamController.close();
+    _connectionSubscription?.cancel();
     _wsService?.dispose();
     super.dispose();
   }
@@ -111,8 +114,16 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     String? host = json['service.host'];
     
     if (host != null) {
+      _connectionSubscription?.cancel();
       _wsService?.dispose();
       _wsService = WebSocketService();
+      
+      _connectionSubscription = _wsService!.connectionStream.listen((status) {
+        setState(() {
+          _connectionStatus = status;
+        });
+      });
+
       try {
         await _wsService!.connect(host, 9000);
         _wsService!.stateStream.listen((newState) {
@@ -121,11 +132,11 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
           });
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Connected to ${service.name} ($host:9000)')),
+          SnackBar(content: Text('Connecting to ${service.name} ($host:9000)')),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to connect to WebSocket on $host:9000')),
+          SnackBar(content: Text('Failed to initialize connection on $host:9000')),
         );
       }
     }
@@ -147,54 +158,100 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
           ),
         ],
       ),
-      body: _connectedService == null 
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(_isDiscoverySupported ? Icons.search : Icons.error_outline, 
-                     size: 64, 
-                     color: _isDiscoverySupported ? Colors.grey : Colors.red),
-                const SizedBox(height: 16),
-                Text(_isDiscoverySupported 
-                    ? 'Search for a scoreboard...' 
-                    : 'Discovery Error: $_discoveryError'),
-                const SizedBox(height: 16),
-                if (_isDiscoverySupported)
-                  ElevatedButton(
-                    onPressed: _showDiscoveryDialog,
-                    child: const Text('Browse Scoreboards'),
-                  ),
-              ],
-            ),
-          )
-        : _state == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Column(
+        children: [
+          if (_connectedService != null && _connectionStatus != ConnectionStatus.connected)
+            Container(
+              color: _connectionStatus == ConnectionStatus.connecting ? Colors.orange : Colors.red,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildClockControls(),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(child: _buildTeamSection(true)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildTeamSection(false)),
-                    ],
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white.withOpacity(0.8)),
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  _buildPeriodControls(),
-                  const SizedBox(height: 24),
-                  _buildPenaltySection(),
+                  const SizedBox(width: 12),
+                  Text(
+                    _connectionStatus == ConnectionStatus.connecting 
+                        ? 'Connecting to scoreboard...' 
+                        : 'Connection lost. Retrying...',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
+          Expanded(
+            child: _connectedService == null 
+              ? _buildDiscoveryBody()
+              : _state == null
+                ? const Center(child: CircularProgressIndicator())
+                : _buildControlBody(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiscoveryBody() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(_isDiscoverySupported ? Icons.search : Icons.error_outline, 
+               size: 64, 
+               color: _isDiscoverySupported ? Colors.grey : Colors.red),
+          const SizedBox(height: 16),
+          Text(_isDiscoverySupported 
+              ? 'Search for a scoreboard...' 
+              : 'Discovery Error: $_discoveryError'),
+          const SizedBox(height: 16),
+          if (_isDiscoverySupported)
+            ElevatedButton(
+              onPressed: _showDiscoveryDialog,
+              child: const Text('Browse Scoreboards'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlBody() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildClockControls(),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(child: _buildTeamSection(true)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildTeamSection(false)),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildPeriodControls(),
+          const SizedBox(height: 24),
+          _buildPenaltySection(),
+        ],
+      ),
     );
   }
 
   void _showDiscoveryDialog() {
+    if (_discovery == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Discovery service is not ready')),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (context) => ScoreboardDiscoveryDialog(
