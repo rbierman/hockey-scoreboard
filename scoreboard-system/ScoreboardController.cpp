@@ -43,13 +43,17 @@ void ScoreboardController::update(double deltaTime) {
             for (int i = 0; i < 2; ++i) {
                 if (state.homePenalties[i].secondsRemaining > 0) {
                     state.homePenalties[i].secondsRemaining -= secondsPassed;
-                    if (state.homePenalties[i].secondsRemaining < 0) 
+                    if (state.homePenalties[i].secondsRemaining <= 0) {
                         state.homePenalties[i].secondsRemaining = 0;
+                        state.homePenalties[i].playerNumber = 0;
+                    }
                 }
                 if (state.awayPenalties[i].secondsRemaining > 0) {
                     state.awayPenalties[i].secondsRemaining -= secondsPassed;
-                    if (state.awayPenalties[i].secondsRemaining < 0) 
+                    if (state.awayPenalties[i].secondsRemaining <= 0) {
                         state.awayPenalties[i].secondsRemaining = 0;
+                        state.awayPenalties[i].playerNumber = 0;
+                    }
                 }
             }
         }

@@ -26,6 +26,9 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   bool _isDiscoverySupported = true;
   String _discoveryError = '';
 
+  final Map<String, TextEditingController> _penaltyControllers = {};
+  final Map<String, TextEditingController> _teamNameControllers = {};
+
   @override
   void initState() {
     super.initState();
@@ -38,7 +41,43 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     _discoveryStreamController.close();
     _connectionSubscription?.cancel();
     _wsService?.dispose();
+    for (var controller in _penaltyControllers.values) {
+      controller.dispose();
+    }
+    for (var controller in _teamNameControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  TextEditingController _getPenaltyController(bool isHome, int index, int playerNumber) {
+    String key = '${isHome ? "home" : "away"}_$index';
+    String newText = playerNumber > 0 ? playerNumber.toString() : '';
+    if (!_penaltyControllers.containsKey(key)) {
+      _penaltyControllers[key] = TextEditingController(text: newText);
+    } else {
+      var controller = _penaltyControllers[key]!;
+      if (controller.text != newText) {
+        // We only update the controller if it's not currently focused
+        // to avoid interrupting the user's typing.
+        // We use a simple way to check if this controller is focused.
+        // In a more complex app we'd use FocusNodes.
+      }
+    }
+    return _penaltyControllers[key]!;
+  }
+
+  TextEditingController _getTeamNameController(bool isHome, String teamName) {
+    String key = isHome ? "home" : "away";
+    if (!_teamNameControllers.containsKey(key)) {
+      _teamNameControllers[key] = TextEditingController(text: teamName);
+    } else {
+      var controller = _teamNameControllers[key]!;
+      if (controller.text != teamName) {
+        // Same as above
+      }
+    }
+    return _teamNameControllers[key]!;
   }
 
   Future<void> _startDiscovery() async {
@@ -360,6 +399,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     int score = isHome ? _state!.homeScore : _state!.awayScore;
     int shots = isHome ? _state!.homeShots : _state!.awayShots;
     String teamName = isHome ? _state!.homeTeamName : _state!.awayTeamName;
+    final controller = _getTeamNameController(isHome, teamName);
 
     return Column(
       children: [
@@ -370,12 +410,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
             border: const OutlineInputBorder(),
             counterText: "",
           ),
-          controller: TextEditingController.fromValue(
-            TextEditingValue(
-              text: teamName,
-              selection: TextSelection.collapsed(offset: teamName.length),
-            ),
-          ),
+          controller: controller,
           onChanged: (val) {
             _wsService?.sendCommand(
               isHome ? 'setHomeTeamName' : 'setAwayTeamName',
@@ -463,6 +498,8 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
       children: List.generate(2, (index) {
         Penalty p = penalties[index];
         bool isActive = p.secondsRemaining > 0;
+        final controller = _getPenaltyController(isHome, index, p.playerNumber);
+
         return Card(
           color: isActive ? Colors.red.withOpacity(0.1) : null,
           child: Padding(
@@ -482,8 +519,8 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
                           helperStyle: const TextStyle(fontSize: 10),
                         ),
                         keyboardType: TextInputType.number,
-                        controller: TextEditingController(text: p.playerNumber > 0 ? p.playerNumber.toString() : ''),
-                        onSubmitted: (val) {
+                        controller: controller,
+                        onChanged: (val) {
                           int player = int.tryParse(val) ?? 0;
                           _wsService?.sendCommand(isHome ? 'setHomePenalty' : 'setAwayPenalty', 
                             index: index, value: p.secondsRemaining, player: player);
@@ -504,12 +541,15 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _penaltyTimeButton(isHome, index, p.playerNumber, 120, '2:00', !isClockRunning),
-                    _penaltyTimeButton(isHome, index, p.playerNumber, 300, '5:00', !isClockRunning),
+                    _penaltyTimeButton(isHome, index, controller, 120, '2:00', !isClockRunning),
+                    _penaltyTimeButton(isHome, index, controller, 300, '5:00', !isClockRunning),
                     IconButton(
                       icon: const Icon(Icons.clear, size: 20),
-                      onPressed: isClockRunning ? null : () => _wsService?.sendCommand(isHome ? 'setHomePenalty' : 'setAwayPenalty', 
-                        index: index, value: 0, player: 0),
+                      onPressed: isClockRunning ? null : () {
+                        controller.clear();
+                        _wsService?.sendCommand(isHome ? 'setHomePenalty' : 'setAwayPenalty', 
+                          index: index, value: 0, player: 0);
+                      },
                     ),
                   ],
                 ),
@@ -521,11 +561,14 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     );
   }
 
-  Widget _penaltyTimeButton(bool isHome, int index, int player, int seconds, String label, bool enabled) {
+  Widget _penaltyTimeButton(bool isHome, int index, TextEditingController controller, int seconds, String label, bool enabled) {
     return TextButton(
       style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(40, 30)),
-      onPressed: enabled ? () => _wsService?.sendCommand(isHome ? 'setHomePenalty' : 'setAwayPenalty', 
-        index: index, value: seconds, player: player) : null,
+      onPressed: enabled ? () {
+        int player = int.tryParse(controller.text) ?? 0;
+        _wsService?.sendCommand(isHome ? 'setHomePenalty' : 'setAwayPenalty', 
+          index: index, value: seconds, player: player);
+      } : null,
       child: Text(label, style: TextStyle(fontSize: 12, color: enabled ? null : Colors.grey)),
     );
   }

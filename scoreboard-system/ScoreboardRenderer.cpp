@@ -240,7 +240,7 @@ void ScoreboardRenderer::render(const ScoreboardState& state) const {
     // Home Penalties
     int hRow = 0;
     for (const auto &penalty : state.homePenalties) {
-        if (penalty.secondsRemaining > 0) {
+        if (penalty.secondsRemaining > 0 || penalty.playerNumber > 0) {
             double yPos = (hRow == 0) ? penaltyRow1Y : penaltyRow2Y;
             ctx.setFillStyle(colorOrange);
             ctx.fillUtf8Text(BLPoint(plyrOffset + 5, yPos), penaltyFont, std::to_string(penalty.playerNumber).c_str());
@@ -253,7 +253,7 @@ void ScoreboardRenderer::render(const ScoreboardState& state) const {
     // Away Penalties
     int aRow = 0;
     for (const auto &penalty : state.awayPenalties) {
-        if (penalty.secondsRemaining > 0) {
+        if (penalty.secondsRemaining > 0 || penalty.playerNumber > 0) {
             double yPos = (aRow == 0) ? penaltyRow1Y : penaltyRow2Y;
             ctx.setFillStyle(colorOrange);
             ctx.fillUtf8Text(BLPoint(awayPlyrX + 5, yPos), penaltyFont, std::to_string(penalty.playerNumber).c_str());
