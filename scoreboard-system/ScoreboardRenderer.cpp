@@ -62,13 +62,26 @@ void ScoreboardRenderer::render() const {
     double clockTextY = mainFontMetrics.capHeight + 4;
 
     // Time Metrics (needed for centering team names relative to time border)
-    std::stringstream minStringStream;
-    minStringStream << std::setfill('0') << std::setw(2) << state.timeMinutes;
-    auto minutes = minStringStream.str();
+    std::string minutes, seconds;
     std::string colonStr = ":";
-    std::stringstream secStringStream;
-    secStringStream << std::setfill('0') << std::setw(2) << state.timeSeconds;
-    auto seconds = secStringStream.str();
+    if (state.clockMode == ClockMode::Game && state.timeMinutes == 0 && state.timeSeconds < 60) {
+        // Under 1 minute: Show SECONDS:TENTHS
+        std::stringstream ssMin;
+        ssMin << std::setfill('0') << std::setw(2) << state.timeSeconds;
+        minutes = ssMin.str();
+        
+        std::stringstream ssSec;
+        ssSec << state.timeTenths;
+        seconds = ssSec.str() + " "; // e.g. "9 " instead of "90"
+    } else {
+        std::stringstream ssMin;
+        ssMin << std::setfill('0') << std::setw(2) << state.timeMinutes;
+        minutes = ssMin.str();
+        
+        std::stringstream ssSec;
+        ssSec << std::setfill('0') << std::setw(2) << state.timeSeconds;
+        seconds = ssSec.str();
+    }
 
     BLTextMetrics tmMin, tmColon, tmSec;
     gb.setUtf8Text(minutes.c_str(), minutes.length());

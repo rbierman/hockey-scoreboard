@@ -38,6 +38,8 @@ void ScoreboardController::update(double deltaTime) {
 
     if (state.isClockRunning && (state.clockMode == ClockMode::Game || state.clockMode == ClockMode::Intermission)) {
         int oldSeconds = static_cast<int>(std::ceil(gameTimeRemaining));
+        int oldTenths = static_cast<int>(std::ceil(gameTimeRemaining * 10.0));
+        
         gameTimeRemaining -= deltaTime;
         
         if (gameTimeRemaining <= 0) {
@@ -52,6 +54,7 @@ void ScoreboardController::update(double deltaTime) {
         }
 
         int newSeconds = static_cast<int>(std::ceil(gameTimeRemaining));
+        int newTenths = static_cast<int>(std::ceil(gameTimeRemaining * 10.0));
 
         if (newSeconds < oldSeconds && state.clockMode == ClockMode::Game) {
             int secondsPassed = oldSeconds - newSeconds;
@@ -75,6 +78,7 @@ void ScoreboardController::update(double deltaTime) {
 
         state.timeMinutes = newSeconds / 60;
         state.timeSeconds = newSeconds % 60;
+        state.timeTenths = newTenths % 10;
         
         if (newSeconds != oldSeconds) {
             notifyStateChanged();

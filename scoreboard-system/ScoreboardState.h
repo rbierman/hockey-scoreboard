@@ -19,6 +19,7 @@ struct ScoreboardState {
     int awayScore = 0;
     int timeMinutes = 12;
     int timeSeconds = 34;
+    int timeTenths = 0;
     int homeShots = 0;
     int awayShots = 0;
     Penalty homePenalties[2];
