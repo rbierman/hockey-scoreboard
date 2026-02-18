@@ -18,18 +18,20 @@ add_executable(hockey-scoreboard main.cpp
         GoalCelebrationRenderer.h
         GoalCelebrationRenderer.cpp
         IRenderer.h
-        KeyboardSimulator.h
-        KeyboardSimulator.cpp
-        NetworkManager.h
-        NetworkManager.cpp
-        WebSocketManager.h
-        WebSocketManager.cpp
+        KeyboardControl.h
+        KeyboardControl.cpp
+        network/NetworkManager.h
+        network/NetworkManager.cpp
+        network/WebSocketManager.h
+        network/WebSocketManager.cpp
         CommandLineArgs.h
         CommandLineArgs.cpp
         ResourceLocator.h
         ResourceLocator.cpp
         TeamManager.h
-        TeamManager.cpp)
+        TeamManager.cpp
+        network/Base64Coder.h
+        network/Base64Coder.cpp)
 
 find_package(ixwebsocket CONFIG REQUIRED)
 target_link_libraries(hockey-scoreboard PRIVATE ixwebsocket::ixwebsocket)

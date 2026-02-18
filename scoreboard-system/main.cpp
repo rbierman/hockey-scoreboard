@@ -11,9 +11,10 @@
 #include "ScoreboardRenderer.h"
 #include "GoalCelebrationRenderer.h"
 #include "IRenderer.h"
-#include "KeyboardSimulator.h"
-#include "NetworkManager.h"
-#include "WebSocketManager.h"
+#include "KeyboardControl.h"
+#include "network/NetworkManager.h"
+#include "network/WebSocketManager.h"
+#include "network/Base64Coder.h"
 #include "TeamManager.h"
 #include "CommandLineArgs.h"
 #include "ResourceLocator.h"
@@ -50,6 +51,7 @@ int main(int argc, char* argv[]) {
 
     ResourceLocator resourceLocator;
     TeamManager teamManager(resourceLocator.getDataDirPath());
+    Base64Coder base64Coder;
     
     WebSocketManager* wsPtr = nullptr;
     
@@ -57,13 +59,13 @@ int main(int argc, char* argv[]) {
         if (wsPtr) wsPtr->broadcastState(state);
     });
 
-    WebSocketManager ws(9000, scoreboard, teamManager);
+    WebSocketManager ws(9000, scoreboard, teamManager, base64Coder);
     wsPtr = &ws;
     ws.start();
 
     ScoreboardRenderer scoreboardRenderer(dfb, resourceLocator, scoreboard.getState());
     GoalCelebrationRenderer goalRenderer(dfb, resourceLocator, scoreboard);
-    KeyboardSimulator simulator(scoreboard);
+    KeyboardControl simulator(scoreboard);
     NetworkManager network(9000);
     network.start();
 

@@ -1,55 +1,10 @@
 #include "WebSocketManager.h"
-#include "ScoreboardController.h"
+#include "../ScoreboardController.h"
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <fstream>
 
 using json = nlohmann::json;
-
-// Simple base64 decoder
-static std::vector<uint8_t> base64_decode(const std::string& in) {
-    static const std::string base64_chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
-
-    std::vector<uint8_t> out;
-    std::vector<int> T(256, -1);
-    for (int i = 0; i < 64; i++) T[base64_chars[i]] = i;
-
-    int val = 0, valb = -8;
-    for (uint8_t c : in) {
-        if (T[c] == -1) continue;
-        val = (val << 6) + T[c];
-        valb += 6;
-        if (valb >= 0) {
-            out.push_back(uint8_t((val >> valb) & 0xFF));
-            valb -= 8;
-        }
-    }
-    return out;
-}
-
-static std::string base64_encode(const std::vector<uint8_t>& in) {
-    static const std::string base64_chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
-
-    std::string out;
-    int val = 0, valb = -6;
-    for (uint8_t c : in) {
-        val = (val << 8) + c;
-        valb += 8;
-        while (valb >= 0) {
-            out.push_back(base64_chars[(val >> valb) & 0x3F]);
-            valb -= 6;
-        }
-    }
-    if (valb > -6) out.push_back(base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
-    while (out.size() % 4) out.push_back('=');
-    return out;
-}
 
 json WebSocketManager::teamsToJson() {
     json teamsList = json::array();
@@ -73,21 +28,12 @@ json WebSocketManager::teamsToJson() {
     return teamsList;
 }
 
-WebSocketManager::WebSocketManager(int port, ScoreboardController& controller, TeamManager& teamManager)
-    : port(port), controller(controller), teamManager(teamManager), server(port, "0.0.0.0") {
+WebSocketManager::WebSocketManager(int port, ScoreboardController& controller, TeamManager& teamManager, const Base64Coder& base64Coder)
+    : port(port), controller(controller), teamManager(teamManager), base64Coder(base64Coder), server(port, "0.0.0.0") {
     
     server.setOnConnectionCallback([this](std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
         auto ws = webSocket.lock();
         if (ws) {
-            // Note: maxMessageSize is in ix::WebSocketOptions, 
-            // but for raw WebSocket objects we often use setMaxMessageSize
-            // or it's handled via the server configuration.
-            // In modern IXWebSocket, setMaxMessageSize is available on the WebSocket object.
-            // Let's use a very large value to effectively disable it for images.
-            // If it doesn't exist, we'll try to find the alternative.
-            // Actually, we can just call it and if it fails to compile, we'll try something else.
-            // But let's be careful.
-            
             ws->setOnMessageCallback([this, connectionState, webSocket](const ix::WebSocketMessagePtr& msg) {
                 auto ws = webSocket.lock();
                 if (ws) {
@@ -149,7 +95,7 @@ void WebSocketManager::handleMessage(std::shared_ptr<ix::ConnectionState> connec
 
                 std::cout << "[WebSocket] Uploading image for " << teamName << " #" << playerNumber << " (" << base64Data.length() << " base64 chars)" << std::endl;
 
-                auto decoded = base64_decode(base64Data);
+                auto decoded = base64Coder.decode(base64Data);
                 if (!decoded.empty()) {
                     if (teamManager.savePlayerImage(teamName, playerNumber, decoded, ext)) {
                         std::cout << "[WebSocket] Image saved successfully. Broadcasting update." << std::endl;
@@ -177,7 +123,7 @@ void WebSocketManager::handleMessage(std::shared_ptr<ix::ConnectionState> connec
                 response["team"] = teamName;
                 response["number"] = playerNumber;
                 if (!imageData.empty()) {
-                    response["data"] = base64_encode(imageData);
+                    response["data"] = base64Coder.encode(imageData);
                 } else {
                     response["data"] = nullptr;
                 }

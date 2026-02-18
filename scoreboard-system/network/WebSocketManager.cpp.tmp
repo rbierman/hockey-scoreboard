@@ -1,0 +1,45 @@
+#include "WebSocketManager.h"
+#include "ScoreboardController.h"
+#include <iostream>
+#include <nlohmann/json.hpp>
+#include <fstream>
+
+using json = nlohmann::json;
+
+json WebSocketManager::teamsToJson() {
+    json teamsList = json::array();
+    for (const auto& name : teamManager.getTeamNames()) {
+        const Team* t = teamManager.getTeam(name);
+        if (t) {
+            json teamJson;
+            teamJson["name"] = t->name;
+            json playersList = json::array();
+            for (const auto& p : t->players) {
+                json pJson;
+                pJson["name"] = p.name;
+                pJson["number"] = p.number;
+                pJson["hasImage"] = !p.imagePath.empty();
+                playersList.push_back(pJson);
+            }
+            teamJson["players"] = playersList;
+            teamsList.push_back(teamJson);
+        }
+    }
+    return teamsList;
+}
+
+WebSocketManager::WebSocketManager(int port, ScoreboardController& controller, TeamManager& teamManager, const Base64Coder& base64Coder)
+    : port(port), controller(controller), teamManager(teamManager), base64Coder(base64Coder), server(port, "0.0.0.0") {
+    
+    server.setOnConnectionCallback([this](std::weak_ptr<ix::WebSocket> webSocket, std::shared_ptr<ix::ConnectionState> connectionState) {
+        auto ws = webSocket.lock();
+        if (ws) {
+            ws->setOnMessageCallback([this, connectionState, webSocket](const ix::WebSocketMessagePtr& msg) {
+                auto ws = webSocket.lock();
+                if (ws) {
+                    handleMessage(connectionState, *ws, msg);
+                }
+            });
+        }
+    });
+}

@@ -5,9 +5,9 @@
 #include <vector>
 #include "ScoreboardController.h"
 
-class KeyboardSimulator {
+class KeyboardControl {
 public:
-    KeyboardSimulator(ScoreboardController& controller);
+    KeyboardControl(ScoreboardController& controller);
 
     void handleInput(sf::RenderWindow& window);
     void printInstructions() const;

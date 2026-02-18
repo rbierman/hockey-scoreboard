@@ -1,18 +1,18 @@
-#include "KeyboardSimulator.h"
+#include "KeyboardControl.h"
 #include <SFML/Window/Event.hpp>
 #include <iostream>
 
-const std::vector<std::string> KeyboardSimulator::TEAM_NAMES = {
+const std::vector<std::string> KeyboardControl::TEAM_NAMES = {
     "MAMBAS", "BREAKERS", "EAGLES", "TIGERS", "SHARKS", "WOLVES", "LIONS", "STARS", "CANUCKS", "PANTHERS"
 };
 
-KeyboardSimulator::KeyboardSimulator(ScoreboardController& controller)
+KeyboardControl::KeyboardControl(ScoreboardController& controller)
     : scoreboard(controller) {
     scoreboard.setHomeTeamName(TEAM_NAMES[homeNameIdx]);
     scoreboard.setAwayTeamName(TEAM_NAMES[awayNameIdx]);
 }
 
-void KeyboardSimulator::handleInput(sf::RenderWindow& window) {
+void KeyboardControl::handleInput(sf::RenderWindow& window) {
     while (const std::optional event = window.pollEvent()) {
         if (event->getIf<sf::Event::Closed>()) {
             window.close();
@@ -76,9 +76,9 @@ void KeyboardSimulator::handleInput(sf::RenderWindow& window) {
     }
 }
 
-void KeyboardSimulator::printInstructions() const {
+void KeyboardControl::printInstructions() const {
     std::cout << "------------------------------------------" << std::endl;
-    std::cout << "SIMULATOR CONTROLS:" << std::endl;
+    std::cout << "KEYBOARD CONTROLS:" << std::endl;
     std::cout << "  [Space] Toggle Start/Stop" << std::endl;
     std::cout << "  [1]     Home Score+" << std::endl;
     std::cout << "  [2]     Away Score+" << std::endl;
