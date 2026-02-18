@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:bonsoir/bonsoir.dart';
 import 'package:flutter/material.dart';
-import 'discovery_dialog.dart';
+import 'discovery_service.dart';
 import 'web_socket_service.dart';
 import 'scoreboard_state.dart';
 import 'team_model.dart';
@@ -22,19 +22,14 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   WebSocketService? _wsService;
   ConnectionStatus _connectionStatus = ConnectionStatus.disconnected;
 
-  BonsoirDiscovery? _discovery;
-  StreamSubscription<BonsoirDiscoveryEvent>? _subscription;
+  final DiscoveryService _discoveryService = DiscoveryService();
   StreamSubscription<ConnectionStatus>? _connectionSubscription;
   StreamSubscription<List<Team>>? _teamsSubscription;
   StreamSubscription<Map<String, dynamic>>? _imageSubscription;
 
   final Map<String, Uint8List> _imageCache = {};
 
-  final StreamController<BonsoirDiscoveryEvent> _discoveryStreamController = StreamController<BonsoirDiscoveryEvent>.broadcast();
-  final List<BonsoirService> _discoveredServices = [];
   BonsoirService? _connectedService;
-  bool _isDiscoverySupported = true;
-  String _discoveryError = '';
 
   final Map<String, TextEditingController> _penaltyControllers = {};
   final Map<String, TextEditingController> _teamNameControllers = {};
@@ -45,13 +40,14 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     super.initState();
     _teamFocusNodes['home'] = FocusNode();
     _teamFocusNodes['away'] = FocusNode();
-    _startDiscovery();
+    _discoveryService.addListener(_onDiscoveryChanged);
+    _discoveryService.start();
   }
 
   @override
   void dispose() {
-    _stopDiscovery();
-    _discoveryStreamController.close();
+    _discoveryService.removeListener(_onDiscoveryChanged);
+    _discoveryService.dispose();
     _connectionSubscription?.cancel();
     _teamsSubscription?.cancel();
     _imageSubscription?.cancel();
@@ -68,6 +64,21 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     super.dispose();
   }
 
+  void _onDiscoveryChanged() {
+    setState(() {
+      // Re-build UI when discovered services change
+      if (_connectedService != null) {
+        // If we are connected, check if our service is still there
+        bool stillExists = _discoveryService.discoveredServices.any((s) => s.name == _connectedService!.name);
+        if (!stillExists) {
+          _connectedService = null;
+          _wsService?.dispose();
+          _wsService = null;
+        }
+      }
+    });
+  }
+
   TextEditingController _getPenaltyController(bool isHome, int index, int playerNumber) {
     String key = '${isHome ? "home" : "away"}_$index';
     String newText = playerNumber > 0 ? playerNumber.toString() : '';
@@ -78,8 +89,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
       if (controller.text != newText) {
         // We only update the controller if it's not currently focused
         // to avoid interrupting the user's typing.
-        // We use a simple way to check if this controller is focused.
-        // In a more complex app we'd use FocusNodes.
       }
     }
     return _penaltyControllers[key]!;
@@ -96,70 +105,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
       }
     }
     return _teamNameControllers[key]!;
-  }
-
-  Future<void> _startDiscovery() async {
-    try {
-      _discovery = BonsoirDiscovery(type: '_hockey-score._tcp');
-      await _discovery!.initialize();
-      
-      final eventStream = _discovery!.eventStream;
-      if (eventStream != null) {
-        _subscription = eventStream.listen((event) {
-          _discoveryStreamController.add(event);
-          
-          final service = event.service;
-          if (service == null) return;
-
-          switch (event) {
-            case BonsoirDiscoveryServiceFoundEvent():
-              setState(() {
-                if (!_discoveredServices.any((s) => s.name == service.name)) {
-                  _discoveredServices.add(service);
-                }
-              });
-              service.resolve(_discovery!.serviceResolver);
-              break;
-            case BonsoirDiscoveryServiceResolvedEvent():
-              setState(() {
-                int index = _discoveredServices.indexWhere((s) => s.name == service.name);
-                if (index != -1) {
-                  _discoveredServices[index] = service;
-                }
-              });
-              break;
-            case BonsoirDiscoveryServiceLostEvent():
-              setState(() {
-                _discoveredServices.removeWhere((s) => s.name == service.name);
-                if (_connectedService?.name == service.name) {
-                  _connectedService = null;
-                  _wsService?.dispose();
-                  _wsService = null;
-                }
-              });
-              break;
-            default:
-              break;
-          }
-        });
-        await _discovery!.start();
-      } else {
-        setState(() {
-          _isDiscoverySupported = false;
-          _discoveryError = 'Discovery event stream is null after initialization.';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _isDiscoverySupported = false;
-        _discoveryError = e.toString();
-      });
-    }
-  }
-
-  Future<void> _stopDiscovery() async {
-    await _subscription?.cancel();
-    await _discovery?.stop();
   }
 
   void _connectToService(BonsoirService service) async {
@@ -304,20 +249,22 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   }
 
   Widget _buildDiscoveryBody() {
-    if (!_isDiscoverySupported) {
+    if (!_discoveryService.isDiscoverySupported) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text('Discovery Error: $_discoveryError'),
+            Text('Discovery Error: ${_discoveryService.discoveryError}'),
           ],
         ),
       );
     }
 
-    if (_discoveredServices.isEmpty) {
+    final services = _discoveryService.discoveredServices;
+
+    if (services.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -342,12 +289,24 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
         ),
         Expanded(
           child: ListView.builder(
-            itemCount: _discoveredServices.length,
+            itemCount: services.length,
             itemBuilder: (context, index) {
-              final service = _discoveredServices[index];
+              final service = services[index];
+              final version = service.attributes['version'];
               return ListTile(
                 leading: const Icon(Icons.sports_hockey, color: Colors.blue),
-                title: Text(service.name),
+                title: Row(
+                  children: [
+                    Expanded(child: Text(service.name)),
+                    if (version != null)
+                      Text(
+                        'v$version',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey,
+                        ),
+                      ),
+                  ],
+                ),
                 subtitle: Text(service.toJson()['service.host'] ?? 'Resolving...'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _connectToService(service),
