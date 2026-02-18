@@ -6,6 +6,8 @@
 #include "DoubleFramebuffer.h"
 #include <iostream>
 #include <SFML/Window/Event.hpp>
+#include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Color.hpp>
 
 
 SFMLDisplay::SFMLDisplay(DoubleFramebuffer& buffer)
