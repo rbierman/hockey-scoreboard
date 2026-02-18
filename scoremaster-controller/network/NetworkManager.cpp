@@ -140,15 +140,17 @@ void NetworkManager::runmDNS() {
         return;
     }
 
-    mDNSRecords records;
-    records.service_type = "_hockey-score._tcp.local.";
-    records.instance_name = "Hockey Scoreboard." + records.service_type;
-    records.port = servicePort;
-    records.local_ip = get_local_ip();
-
     char hostname_buf[256];
     gethostname(hostname_buf, sizeof(hostname_buf));
     std::string host_str(hostname_buf);
+
+    mDNSRecords records;
+    records.service_type = "_hockey-score._tcp.local.";
+    // Make instance name unique by including hostname
+    records.instance_name = "Hockey Scoreboard (" + host_str + ")." + records.service_type;
+    records.port = servicePort;
+    records.local_ip = get_local_ip();
+
     if (host_str.find(".local") == std::string::npos) {
         records.hostname = host_str + ".local.";
     } else if (host_str.back() != '.') {

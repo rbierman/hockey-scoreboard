@@ -1,0 +1,15 @@
+{
+    "name": "Luker",
+    "players": [
+        {
+            "imagePath": "",
+            "name": "New Team",
+            "number": 0
+        },
+        {
+            "imagePath": "Luker_17.jpg",
+            "name": "Ryan",
+            "number": 17
+        }
+    ]
+}

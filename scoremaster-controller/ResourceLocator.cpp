@@ -9,15 +9,21 @@ ResourceLocator::ResourceLocator() {
     // 1. Try local path (development)
     std::string modulePath = cpplocate::getModulePath();
     
-    if (!modulePath.empty() && fs::exists(modulePath + "/fonts")) {
-        _basePath = modulePath;
-    } 
+    if (!modulePath.empty()) {
+        if (fs::exists(modulePath + "/fonts")) {
+            _basePath = modulePath;
+        } else if (fs::exists(fs::path(modulePath).parent_path().string() + "/fonts")) {
+            _basePath = fs::path(modulePath).parent_path().string();
+        }
+    }
+    
     // 2. Try standard installation path
-    else if (fs::exists("/usr/share/scoremaster-controller/fonts")) {
+    if (_basePath.empty() && fs::exists("/usr/share/scoremaster-controller/fonts")) {
         _basePath = "/usr/share/scoremaster-controller";
     }
+
     // 3. Fallback
-    else {
+    if (_basePath.empty()) {
         std::cerr << "Warning: Could not locate resources in local or install paths. Falling back to current directory." << std::endl;
         _basePath = ".";
     }

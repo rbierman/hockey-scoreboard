@@ -4,7 +4,10 @@ if(NOT DEFINED SCOREMASTER_VERSION)
     set(SCOREMASTER_VERSION "1.0.0-dev")
 endif()
 
-project(scoremaster-controller VERSION ${SCOREMASTER_VERSION})
+# Extract numeric part for CMake project() version
+string(REGEX MATCH "^[0-9]+(\\.[0-9]+)*" SCOREMASTER_VERSION_NUMERIC "${SCOREMASTER_VERSION}")
+
+project(scoremaster-controller VERSION ${SCOREMASTER_VERSION_NUMERIC})
 
 set(CMAKE_CXX_STANDARD 26)
 
@@ -100,7 +103,7 @@ install(PROGRAMS packaging/scoremaster-update.sh
 
 set(CPACK_PACKAGE_NAME "scoremaster-controller")
 set(CPACK_PACKAGE_VENDOR "ScoreMaster")
-set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VERSION "${SCOREMASTER_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "High-performance hockey scoreboard renderer")
 set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_CONTACT "admin@example.com")
