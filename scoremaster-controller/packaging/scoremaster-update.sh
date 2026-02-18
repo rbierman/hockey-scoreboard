@@ -19,7 +19,17 @@ fi
 if [ "$INSTALLED_VER" != "$LATEST_VER" ]; then
     echo "Update available: $INSTALLED_VER -> $LATEST_VER"
     
-    DEB_URL=$(echo "$LATEST_RELEASE_JSON" | jq -r '.assets[] | select(.name | endswith(".deb")) | .browser_download_url')
+    # Detect if we are currently running headless or standard
+    # Standard build depends on libX11, headless does not.
+    if ldd /usr/bin/scoremaster-controller | grep -q "libX11"; then
+        echo "Detected Standard installation."
+        ASSET_PATTERN="scoremaster-controller-.*-Linux.deb"
+        # Specifically EXCLUDE headless
+        DEB_URL=$(echo "$LATEST_RELEASE_JSON" | jq -r '.assets[] | select(.name | test("headless") | not) | select(.name | endswith(".deb")) | .browser_download_url' | head -n 1)
+    else
+        echo "Detected Headless installation."
+        DEB_URL=$(echo "$LATEST_RELEASE_JSON" | jq -r '.assets[] | select(.name | test("headless")) | select(.name | endswith(".deb")) | .browser_download_url' | head -n 1)
+    fi
     
     if [ -z "$DEB_URL" ] || [ "$DEB_URL" == "null" ]; then
         echo "Error: Could not find .deb asset in the latest release."
