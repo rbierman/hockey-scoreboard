@@ -1,4 +1,4 @@
-name: ScoreMaster Controller Build and Release
+name: Controller - Release
 
 on:
   workflow_dispatch:
