@@ -1,16 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:bonsoir/bonsoir.dart';
 import 'package:flutter/material.dart';
-import 'discovery_service.dart';
+import 'scoreboard_model.dart';
 import 'web_socket_service.dart';
 import 'scoreboard_state.dart';
 import 'team_model.dart';
 import 'team_configuration_page.dart';
 
 class ScoreboardControlPage extends StatefulWidget {
-  const ScoreboardControlPage({super.key});
+  final ScoreboardInstance instance;
+
+  const ScoreboardControlPage({super.key, required this.instance});
 
   @override
   State<ScoreboardControlPage> createState() => _ScoreboardControlPageState();
@@ -22,14 +23,11 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   WebSocketService? _wsService;
   ConnectionStatus _connectionStatus = ConnectionStatus.disconnected;
 
-  final DiscoveryService _discoveryService = DiscoveryService();
   StreamSubscription<ConnectionStatus>? _connectionSubscription;
   StreamSubscription<List<Team>>? _teamsSubscription;
   StreamSubscription<Map<String, dynamic>>? _imageSubscription;
 
   final Map<String, Uint8List> _imageCache = {};
-
-  BonsoirService? _connectedService;
 
   final Map<String, TextEditingController> _penaltyControllers = {};
   final Map<String, TextEditingController> _teamNameControllers = {};
@@ -40,14 +38,11 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     super.initState();
     _teamFocusNodes['home'] = FocusNode();
     _teamFocusNodes['away'] = FocusNode();
-    _discoveryService.addListener(_onDiscoveryChanged);
-    _discoveryService.start();
+    _connectToInstance(widget.instance);
   }
 
   @override
   void dispose() {
-    _discoveryService.removeListener(_onDiscoveryChanged);
-    _discoveryService.dispose();
     _connectionSubscription?.cancel();
     _teamsSubscription?.cancel();
     _imageSubscription?.cancel();
@@ -62,21 +57,6 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
       controller.dispose();
     }
     super.dispose();
-  }
-
-  void _onDiscoveryChanged() {
-    setState(() {
-      // Re-build UI when discovered services change
-      if (_connectedService != null) {
-        // If we are connected, check if our service is still there
-        bool stillExists = _discoveryService.discoveredServices.any((s) => s.name == _connectedService!.name);
-        if (!stillExists) {
-          _connectedService = null;
-          _wsService?.dispose();
-          _wsService = null;
-        }
-      }
-    });
   }
 
   TextEditingController _getPenaltyController(bool isHome, int index, int playerNumber) {
@@ -107,63 +87,53 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
     return _teamNameControllers[key]!;
   }
 
-  void _connectToService(BonsoirService service) async {
-    setState(() {
-      _connectedService = service;
-    });
+  void _connectToInstance(ScoreboardInstance instance) async {
+    _connectionSubscription?.cancel();
+    _wsService?.dispose();
+    _wsService = WebSocketService();
     
-    final json = service.toJson();
-    String? host = json['service.host'];
-    
-    if (host != null) {
-      _connectionSubscription?.cancel();
-      _wsService?.dispose();
-      _wsService = WebSocketService();
-      
-      _connectionSubscription = _wsService!.connectionStream.listen((status) {
-        setState(() {
-          _connectionStatus = status;
-        });
+    _connectionSubscription = _wsService!.connectionStream.listen((status) {
+      setState(() {
+        _connectionStatus = status;
       });
+    });
 
-      _teamsSubscription = _wsService!.teamsStream.listen((teams) {
-        setState(() {
-          _teams = teams;
-        });
-        // Request images for players that have them
-        for (var team in teams) {
-          for (var player in team.players) {
-            if (player.hasImage) {
-              // Always request to ensure we have the latest (in case it changed)
-              _wsService!.getPlayerImage(team.name, player.number);
-            }
+    _teamsSubscription = _wsService!.teamsStream.listen((teams) {
+      setState(() {
+        _teams = teams;
+      });
+      // Request images for players that have them
+      for (var team in teams) {
+        for (var player in team.players) {
+          if (player.hasImage) {
+            // Always request to ensure we have the latest (in case it changed)
+            _wsService!.getPlayerImage(team.name, player.number);
           }
         }
-      });
-
-      _imageSubscription = _wsService!.imageStream.listen((imageData) {
-        String team = imageData['team'];
-        int number = imageData['number'];
-        String? base64 = imageData['data'];
-        if (base64 != null) {
-          setState(() {
-            _imageCache["${team}_$number"] = base64Decode(base64);
-          });
-        }
-      });
-
-      try {
-        int port = service.port;
-        await _wsService!.connect(host, port);
-        _wsService!.stateStream.listen((newState) {
-          setState(() {
-            _state = newState;
-          });
-        });
-        _wsService!.getTeams();
-      } catch (e) {
-        print('Connection error: $e');
       }
+    });
+
+    _imageSubscription = _wsService!.imageStream.listen((imageData) {
+      String team = imageData['team'];
+      int number = imageData['number'];
+      String? base64 = imageData['data'];
+      if (base64 != null) {
+        setState(() {
+          _imageCache["${team}_$number"] = base64Decode(base64);
+        });
+      }
+    });
+
+    try {
+      await _wsService!.connect(instance.host, instance.port);
+      _wsService!.stateStream.listen((newState) {
+        setState(() {
+          _state = newState;
+        });
+      });
+      _wsService!.getTeams();
+    } catch (e) {
+      print('Connection error: $e');
     }
   }
 
@@ -171,23 +141,9 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ScoreMaster'),
+        title: Text(widget.instance.name),
         actions: [
-          if (_connectedService != null) ...[
-            IconButton(
-              icon: const Icon(Icons.power_settings_new),
-              tooltip: 'Disconnect',
-              onPressed: () {
-                setState(() {
-                  _wsService?.dispose();
-                  _wsService = null;
-                  _connectedService = null;
-                  _state = null;
-                  _teams = [];
-                  _imageCache.clear();
-                });
-              },
-            ),
+          if (_wsService != null) ...[
             IconButton(
               icon: const Icon(Icons.people),
               tooltip: 'Configure Teams',
@@ -210,7 +166,7 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
       ),
       body: Column(
         children: [
-          if (_connectedService != null && _connectionStatus != ConnectionStatus.connected)
+          if (_connectionStatus != ConnectionStatus.connected)
             Container(
               color: _connectionStatus == ConnectionStatus.connecting ? Colors.orange : Colors.red,
               width: double.infinity,
@@ -237,84 +193,12 @@ class _ScoreboardControlPageState extends State<ScoreboardControlPage> {
               ),
             ),
           Expanded(
-            child: _connectedService == null 
-              ? _buildDiscoveryBody()
-              : _state == null
+            child: _state == null
                 ? const Center(child: CircularProgressIndicator())
                 : _buildControlBody(),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDiscoveryBody() {
-    if (!_discoveryService.isDiscoverySupported) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Discovery Error: ${_discoveryService.discoveryError}'),
-          ],
-        ),
-      );
-    }
-
-    final services = _discoveryService.discoveredServices;
-
-    if (services.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 24),
-            Text('Searching for scoreboards...', style: TextStyle(fontSize: 18)),
-            SizedBox(height: 8),
-            Text('Ensure the scoreboard-system is running on the same network.', 
-              style: TextStyle(color: Colors.grey, fontSize: 12)),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('Select a Scoreboard:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: services.length,
-            itemBuilder: (context, index) {
-              final service = services[index];
-              final version = service.attributes['version'];
-              return ListTile(
-                leading: const Icon(Icons.sports_hockey, color: Colors.blue),
-                title: Row(
-                  children: [
-                    Expanded(child: Text(service.name)),
-                    if (version != null)
-                      Text(
-                        'v$version',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey,
-                        ),
-                      ),
-                  ],
-                ),
-                subtitle: Text(service.toJson()['service.host'] ?? 'Resolving...'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _connectToService(service),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 
