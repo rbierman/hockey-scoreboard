@@ -1,16 +1,18 @@
-# Hockey Scoreboard Monorepo
+# ScoreMaster Monorepo
 
-This repository contains the Hockey Scoreboard system and its accompanying control application.
+This repository contains the ScoreMaster system, a professional-grade hockey scoreboard solution.
 
-## Structure
+## Project Structure
 
-- **`scoreboard-system/`**: The core C++ scoreboard controller and renderer using Blend2D and SFML.
-- **`scoreboard-app/`**: A Flutter-based mobile application to control the scoreboard (under development).
+- **`scoremaster-controller/`**: High-performance C++26 scoreboard engine. Handles game logic, 2D rendering (Blend2D), and network communication.
+- **`scoremaster-app/`**: Flutter mobile application for remote scoreboard management.
 
-## Getting Started
+## Releasing
 
-### Scoreboard System
-Navigate to `scoreboard-system/` and follow the instructions in its README to build and run the C++ application.
+Releases for the controller are handled via GitHub Actions. To trigger a new release (which builds Debian packages for standard and headless targets):
 
-### Scoreboard App
-Navigate to `scoreboard-app/` and run `flutter run` to start the mobile control application.
+```bash
+gh workflow run release.yml
+```
+
+This will automatically increment the patch version and create a new GitHub Release with the compiled `.deb` artifacts.
