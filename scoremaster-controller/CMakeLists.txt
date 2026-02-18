@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 4.1)
-project(hockey-scoreboard VERSION 1.0.0)
+project(scoremaster-controller VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 26)
 
-add_executable(hockey-scoreboard main.cpp
+add_executable(scoremaster-controller main.cpp
         display/DoubleFramebuffer.cpp
         display/IDisplay.h
         display/SFMLDisplay.cpp
@@ -34,51 +34,51 @@ add_executable(hockey-scoreboard main.cpp
         network/Base64Coder.cpp)
 
 find_package(ixwebsocket CONFIG REQUIRED)
-target_link_libraries(hockey-scoreboard PRIVATE ixwebsocket::ixwebsocket)
+target_link_libraries(scoremaster-controller PRIVATE ixwebsocket::ixwebsocket)
 
 find_package(nlohmann_json CONFIG REQUIRED)
-target_link_libraries(hockey-scoreboard PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(scoremaster-controller PRIVATE nlohmann_json::nlohmann_json)
 
 find_package(SFML COMPONENTS Network Graphics Window Audio System CONFIG REQUIRED)
-target_link_libraries(hockey-scoreboard PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)
+target_link_libraries(scoremaster-controller PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)
 
 find_package(blend2d CONFIG REQUIRED)
-target_link_libraries(hockey-scoreboard PRIVATE blend2d::blend2d)
+target_link_libraries(scoremaster-controller PRIVATE blend2d::blend2d)
 
 find_package(cpplocate REQUIRED)
-target_link_libraries(hockey-scoreboard PRIVATE cpplocate::cpplocate)
+target_link_libraries(scoremaster-controller PRIVATE cpplocate::cpplocate)
 
 # --- INSTALLATION ---
 
 include(GNUInstallDirs)
 
 # Install binary
-install(TARGETS hockey-scoreboard
+install(TARGETS scoremaster-controller
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 # Install assets (Fonts and Data)
-install(DIRECTORY fonts DESTINATION ${CMAKE_INSTALL_DATADIR}/hockey-scoreboard)
+install(DIRECTORY fonts DESTINATION ${CMAKE_INSTALL_DATADIR}/scoremaster-controller)
 # Create data dir if it doesn't exist in source, or just ensure it's installed
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/data")
-    install(DIRECTORY data DESTINATION ${CMAKE_INSTALL_DATADIR}/hockey-scoreboard)
+    install(DIRECTORY data DESTINATION ${CMAKE_INSTALL_DATADIR}/scoremaster-controller)
 endif()
 
 # Install systemd service
-install(FILES packaging/hockey-scoreboard.service 
+install(FILES packaging/scoremaster-controller.service 
         DESTINATION lib/systemd/system)
 
 # --- CPACK (DEB Generation) ---
 
-set(CPACK_PACKAGE_NAME "hockey-scoreboard")
-set(CPACK_PACKAGE_VENDOR "HockeyScoreboard")
+set(CPACK_PACKAGE_NAME "scoremaster-controller")
+set(CPACK_PACKAGE_VENDOR "ScoreMaster")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "High-performance hockey scoreboard renderer")
 set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_CONTACT "admin@example.com")
 
 # Debian specific
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Scoreboard Maintainer")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "ScoreMaster Maintainer")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsfml-graphics3.0, libsfml-window3.0, libsfml-system3.0, libsfml-network3.0")
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")

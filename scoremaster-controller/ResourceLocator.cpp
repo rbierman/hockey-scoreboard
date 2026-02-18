@@ -13,8 +13,8 @@ ResourceLocator::ResourceLocator() {
         _basePath = modulePath;
     } 
     // 2. Try standard installation path
-    else if (fs::exists("/usr/share/hockey-scoreboard/fonts")) {
-        _basePath = "/usr/share/hockey-scoreboard";
+    else if (fs::exists("/usr/share/scoremaster-controller/fonts")) {
+        _basePath = "/usr/share/scoremaster-controller";
     }
     // 3. Fallback
     else {

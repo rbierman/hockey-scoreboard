@@ -21,28 +21,28 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y 
-            ninja-build 
-            libudev-dev 
-            libx11-dev 
-            libxcursor-dev 
-            libxrandr-dev 
-            libxinerama-dev 
-            libxi-dev 
-            libgl1-mesa-dev 
-            libglu1-mesa-dev 
-            libfreetype6-dev 
-            libopenal-dev 
-            libflac-dev 
+          sudo apt-get install -y \
+            ninja-build \
+            libudev-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libfreetype6-dev \
+            libopenal-dev \
+            libflac-dev \
             libvorbis-dev
 
       - name: Configure CMake
         run: |
           # Use the pre-installed vcpkg on GitHub runners
-          cmake -B build -S scoreboard-system 
-            -G Ninja 
-            -DCMAKE_BUILD_TYPE=Release 
-            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake 
+          cmake -B build -S scoremaster-controller \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
             -DPROJECT_VERSION=${{ github.event.inputs.version }}
 
       - name: Build
@@ -51,8 +51,8 @@ jobs:
       - name: Package
         run: |
           # Ensure scripts are executable for CPack
-          chmod +x scoreboard-system/packaging/preinst
-          chmod +x scoreboard-system/packaging/postinst
+          chmod +x scoremaster-controller/packaging/preinst
+          chmod +x scoremaster-controller/packaging/postinst
           cd build
           cpack -G DEB
 
