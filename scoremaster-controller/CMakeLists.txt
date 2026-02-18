@@ -49,8 +49,10 @@ if(ENABLE_SFML)
     target_link_libraries(scoremaster-controller PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)
 endif()
 
+find_package(Threads REQUIRED)
+
 find_package(ixwebsocket CONFIG REQUIRED)
-target_link_libraries(scoremaster-controller PRIVATE ixwebsocket::ixwebsocket)
+target_link_libraries(scoremaster-controller PRIVATE ixwebsocket::ixwebsocket Threads::Threads)
 
 find_package(nlohmann_json CONFIG REQUIRED)
 target_link_libraries(scoremaster-controller PRIVATE nlohmann_json::nlohmann_json)
