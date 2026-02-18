@@ -30,5 +30,10 @@ std::string ResourceLocator::getFontsDirPath() const {
 }
 
 std::string ResourceLocator::getDataDirPath() const {
+    // Standard Linux path for mutable application data
+    if (fs::exists("/var/lib/scoremaster-controller")) {
+        return "/var/lib/scoremaster-controller";
+    }
+    // Fallback to local development directory
     return _basePath + "/data";
 }

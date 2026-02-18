@@ -12,6 +12,11 @@ if [ "$1" = "configure" ]; then
     # Create the config directory
     mkdir -p /etc/scoremaster-controller
     
+    # Create the data directory
+    mkdir -p /var/lib/scoremaster-controller
+    chown scoreboard:scoreboard /var/lib/scoremaster-controller
+    chmod 755 /var/lib/scoremaster-controller
+
     # Write the configuration file with comments
     cat > /etc/scoremaster-controller/config.env <<EOF
 # ScoreMaster Controller Configuration
