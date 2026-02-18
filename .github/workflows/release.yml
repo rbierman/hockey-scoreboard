@@ -1,0 +1,68 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y 
+            ninja-build 
+            libudev-dev 
+            libx11-dev 
+            libxcursor-dev 
+            libxrandr-dev 
+            libxinerama-dev 
+            libxi-dev 
+            libgl1-mesa-dev 
+            libglu1-mesa-dev 
+            libfreetype6-dev 
+            libopenal-dev 
+            libflac-dev 
+            libvorbis-dev
+
+      - name: Configure CMake
+        run: |
+          # Use the pre-installed vcpkg on GitHub runners
+          cmake -B build -S scoreboard-system 
+            -G Ninja 
+            -DCMAKE_BUILD_TYPE=Release 
+            -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake 
+            -DPROJECT_VERSION=${{ github.event.inputs.version }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        run: |
+          # Ensure scripts are executable for CPack
+          chmod +x scoreboard-system/packaging/preinst
+          chmod +x scoreboard-system/packaging/postinst
+          cd build
+          cpack -G DEB
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Release v${{ github.event.inputs.version }}
+          files: build/*.deb
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

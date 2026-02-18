@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.1)
-project(hockey-scoreboard)
+project(hockey-scoreboard VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 26)
 
@@ -72,7 +72,7 @@ install(FILES packaging/hockey-scoreboard.service
 
 set(CPACK_PACKAGE_NAME "hockey-scoreboard")
 set(CPACK_PACKAGE_VENDOR "HockeyScoreboard")
-set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "High-performance hockey scoreboard renderer")
 set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_CONTACT "admin@example.com")
