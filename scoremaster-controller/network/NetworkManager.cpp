@@ -212,6 +212,33 @@ void NetworkManager::runmDNS() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
+    // Send goodbye message
+    mdns_record_t ptr_record = {};
+    ptr_record.name = {records.service_type.c_str(), records.service_type.length()};
+    ptr_record.type = MDNS_RECORDTYPE_PTR;
+    ptr_record.data.ptr.name = {records.instance_name.c_str(), records.instance_name.length()};
+
+    mdns_record_t srv_record = {};
+    srv_record.name = {records.instance_name.c_str(), records.instance_name.length()};
+    srv_record.type = MDNS_RECORDTYPE_SRV;
+    srv_record.data.srv.name = {records.hostname.c_str(), records.hostname.length()};
+    srv_record.data.srv.port = records.port;
+
+    mdns_record_t a_record = {};
+    a_record.name = {records.hostname.c_str(), records.hostname.length()};
+    a_record.type = MDNS_RECORDTYPE_A;
+    a_record.data.a.addr.sin_family = AF_INET;
+    inet_pton(AF_INET, records.local_ip.c_str(), &a_record.data.a.addr.sin_addr);
+
+    mdns_record_t txt_record = {};
+    txt_record.name = {records.instance_name.c_str(), records.instance_name.length()};
+    txt_record.type = MDNS_RECORDTYPE_TXT;
+    txt_record.data.txt.key = {nullptr, 0};
+    txt_record.data.txt.value = {nullptr, 0};
+
+    mdns_record_t additional[3] = { srv_record, txt_record, a_record };
+    mdns_goodbye_multicast(sock, buffer, 2048, ptr_record, nullptr, 0, additional, 3);
+
     free(buffer);
     mdns_socket_close(sock);
 }
