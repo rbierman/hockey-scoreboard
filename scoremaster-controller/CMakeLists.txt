@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.28)
-project(scoremaster-controller VERSION 1.0.0)
+
+if(NOT DEFINED SCOREMASTER_VERSION)
+    set(SCOREMASTER_VERSION "1.0.0-dev")
+endif()
+
+project(scoremaster-controller VERSION ${SCOREMASTER_VERSION})
 
 set(CMAKE_CXX_STANDARD 26)
 

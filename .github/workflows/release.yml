@@ -56,7 +56,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_SFML=ON \
             -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
-            -DPROJECT_VERSION=${{ github.event.inputs.version }}
+            -DSCOREMASTER_VERSION=${{ github.event.inputs.version }}
           cmake --build build-standard
 
       - name: Configure and Build Headless (no SFML)
@@ -66,7 +66,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_SFML=OFF \
             -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
-            -DPROJECT_VERSION=${{ github.event.inputs.version }}
+            -DSCOREMASTER_VERSION=${{ github.event.inputs.version }}
           cmake --build build-headless
 
       - name: Package
