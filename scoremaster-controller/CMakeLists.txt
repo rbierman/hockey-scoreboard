@@ -105,14 +105,14 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
 
 if(ENABLE_SFML)
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsfml-graphics3.0, libsfml-window3.0, libsfml-system3.0, libsfml-network3.0, curl, jq")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsfml-graphics3.0, libsfml-window3.0, libsfml-system3.0, libsfml-network3.0, curl, jq, debconf, iproute2")
 else()
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "curl, jq")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "curl, jq, debconf, iproute2")
     set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-headless-Linux")
 endif()
 
 # Attach scripts
 set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA 
-    "${CMAKE_CURRENT_SOURCE_DIR}/packaging/preinst;${CMAKE_CURRENT_SOURCE_DIR}/packaging/postinst")
+    "${CMAKE_CURRENT_SOURCE_DIR}/packaging/preinst;${CMAKE_CURRENT_SOURCE_DIR}/packaging/postinst;${CMAKE_CURRENT_SOURCE_DIR}/packaging/config;${CMAKE_CURRENT_SOURCE_DIR}/packaging/templates")
 
 include(CPack)

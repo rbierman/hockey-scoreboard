@@ -1,8 +1,32 @@
 #!/bin/sh
 set -e
+. /usr/share/debconf/confmodule
 
 if [ "$1" = "configure" ]; then
-    echo "Setting permissions and capabilities for scoremaster-controller..."
+    echo "Configuring ScoreMaster Controller..."
+    
+    # Get the selected interface from debconf
+    db_get scoremaster-controller/interface
+    SELECTED_INTERFACE="$RET"
+
+    # Create the config directory
+    mkdir -p /etc/scoremaster-controller
+    
+    # Write the configuration file with comments
+    cat > /etc/scoremaster-controller/config.env <<EOF
+# ScoreMaster Controller Configuration
+# -----------------------------------
+
+# The network interface connected to the ColorLight LED sender card.
+# This must be a physical Ethernet interface (e.g., eth0, enp2s0).
+# After changing this value, restart the service with:
+#   sudo systemctl restart scoremaster-controller
+SCOREMASTER_INTERFACE=$SELECTED_INTERFACE
+
+# Other options can be added here
+EOF
+
+    echo "Setting permissions and capabilities..."
     
     # Ensure the binary is owned by root but executable by others
     chown root:scoreboard /usr/bin/scoremaster-controller
