@@ -228,7 +228,7 @@ jobs:
       - name: Stage Linux Artifacts
         run: |
           mkdir -p staging
-          cp scoremaster-app-linux.tar.gz staging/
+          cp scoremaster-app/scoremaster-app-linux.tar.gz staging/
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
