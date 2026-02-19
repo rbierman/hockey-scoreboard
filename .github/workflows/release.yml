@@ -110,13 +110,17 @@ jobs:
           cd build-standard && cpack -G DEB && cd ..
           cd build-headless && cpack -G DEB && cd ..
 
+      - name: Stage Controller Artifacts
+        run: |
+          mkdir -p staging
+          cp build-standard/*.deb staging/
+          cp build-headless/*.deb staging/
+
       - name: Upload Controller Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: controller-debs
-          path: |
-            build-standard/*.deb
-            build-headless/*.deb
+          path: staging/
 
   build-app:
     needs: version
@@ -165,13 +169,17 @@ jobs:
       - name: Rename APK
         run: cp scoremaster-app/build/app/outputs/flutter-apk/app-release.apk scoremaster-app-v${{ needs.version.outputs.version }}.apk
 
+      - name: Stage App Artifacts
+        run: |
+          mkdir -p staging
+          cp scoremaster-app-v${{ needs.version.outputs.version }}.apk staging/
+          cp scoremaster-app/scoremaster-app-linux.tar.gz staging/
+
       - name: Upload App Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: app-artifacts
-          path: |
-            scoremaster-app-v${{ needs.version.outputs.version }}.apk
-            scoremaster-app-linux.tar.gz
+          path: staging/
 
   release:
     needs: [version, build-controller, build-app]
