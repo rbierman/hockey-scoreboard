@@ -1,0 +1,70 @@
+#!/bin/sh
+set -e
+. /usr/share/debconf/confmodule
+
+if [ "$1" = "configure" ]; then
+    echo "Configuring PuckPulse Controller..."
+    
+    # Get the selected interface from debconf
+    db_get puckpulse-controller/interface
+    SELECTED_INTERFACE="$RET"
+    
+    if [ "$SELECTED_INTERFACE" = "None (Disable ColorLight)" ]; then
+        SELECTED_INTERFACE="disabled"
+        CLI_ARGS="-s"
+    else
+        CLI_ARGS="-c $SELECTED_INTERFACE -s"
+    fi
+
+    # Create the config directory
+    mkdir -p /etc/puckpulse-controller
+    
+    # Create the data directory
+    mkdir -p /var/lib/puckpulse-controller
+    chown scoreboard:scoreboard /var/lib/puckpulse-controller
+    chmod 755 /var/lib/puckpulse-controller
+
+    # Write the configuration file with comments
+    cat > /etc/puckpulse-controller/config.env <<EOF
+# PuckPulse Controller Configuration
+# -----------------------------------
+
+# The network interface connected to the ColorLight LED sender card.
+# Set to 'disabled' to turn off LED output.
+PUCKPULSE_INTERFACE=$SELECTED_INTERFACE
+
+# Arguments passed to the puckpulse-controller binary.
+# After changing these, restart with: sudo systemctl restart puckpulse-controller
+PUCKPULSE_ARGS="$CLI_ARGS"
+EOF
+
+    echo "Setting permissions and capabilities..."
+    
+    # Ensure the binary is owned by root but executable by others
+    chown root:scoreboard /usr/bin/puckpulse-controller
+    chmod 755 /usr/bin/puckpulse-controller
+
+    # Grant raw socket capabilities to the binary
+    if command -v setcap > /dev/null; then
+        setcap 'cap_net_raw,cap_net_admin=eip' /usr/bin/puckpulse-controller || echo "Warning: Failed to set capabilities."
+    else
+        echo "Warning: setcap command not found. LED support may require root."
+    fi
+
+    # Enable and start the services
+    echo "Enabling PuckPulse services and update timer..."
+    systemctl daemon-reload || true
+    systemctl enable puckpulse-controller.service || true
+    systemctl start puckpulse-controller.service || true
+    
+    systemctl enable puckpulse-update.timer || true
+    systemctl start puckpulse-update.timer || true
+
+    echo "--------------------------------------------------------"
+    echo " PuckPulse Controller installation complete!"
+    echo " To change the network interface later, run:"
+    echo "   sudo dpkg-reconfigure puckpulse-controller"
+    echo "--------------------------------------------------------"
+fi
+
+exit 0

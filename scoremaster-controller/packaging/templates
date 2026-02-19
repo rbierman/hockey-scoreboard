@@ -1,8 +1,0 @@
-Template: scoremaster-controller/interface
-Type: select
-Choices: ${interfaces}
-Default: eth0
-Description: Select the network interface for the ColorLight LED system:
- The ScoreMaster Controller sends raw Ethernet frames to the LED system.
- Please select the physical interface (e.g., eth0, enp2s0) connected to the
- ColorLight sender card.

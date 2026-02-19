@@ -1,0 +1,17 @@
+[Unit]
+Description=PuckPulse Controller Renderer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=scoreboard
+Group=scoreboard
+EnvironmentFile=/etc/puckpulse-controller/config.env
+# Capabilities are attached to the binary via setcap in postinst
+ExecStart=/usr/bin/puckpulse-controller ${PUCKPULSE_ARGS}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

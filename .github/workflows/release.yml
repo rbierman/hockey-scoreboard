@@ -77,35 +77,35 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/vcpkg_cache
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('scoremaster-controller/vcpkg.json') }}
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('puckpulse-controller/vcpkg.json') }}
           restore-keys: |
             ${{ runner.os }}-vcpkg-
 
       - name: Configure and Build Standard (with SFML)
         run: |
-          cmake -B build-standard -S scoremaster-controller \
+          cmake -B build-standard -S puckpulse-controller \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_SFML=ON \
             -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
-            -DSCOREMASTER_VERSION=${{ needs.version.outputs.version }}
+            -DPUCKPULSE_VERSION=${{ needs.version.outputs.version }}
           cmake --build build-standard
 
       - name: Configure and Build Headless (no SFML)
         run: |
-          cmake -B build-headless -S scoremaster-controller \
+          cmake -B build-headless -S puckpulse-controller \
             -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_SFML=OFF \
             -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
-            -DSCOREMASTER_VERSION=${{ needs.version.outputs.version }}
+            -DPUCKPULSE_VERSION=${{ needs.version.outputs.version }}
           cmake --build build-headless
 
       - name: Package
         run: |
-          chmod +x scoremaster-controller/packaging/preinst
-          chmod +x scoremaster-controller/packaging/postinst
-          chmod +x scoremaster-controller/packaging/config
+          chmod +x puckpulse-controller/packaging/preinst
+          chmod +x puckpulse-controller/packaging/postinst
+          chmod +x puckpulse-controller/packaging/config
           
           cd build-standard && cpack -G DEB && cd ..
           cd build-headless && cpack -G DEB && cd ..
@@ -146,7 +146,7 @@ jobs:
         with:
           path: |
             ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('scoremaster-app/pubspec.lock') }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('puckpulse-app/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
@@ -155,21 +155,21 @@ jobs:
 
       - name: Install App Dependencies
         run: |
-          cd scoremaster-app
+          cd puckpulse-app
           flutter pub get
 
       - name: Build Android APK
         run: |
-          cd scoremaster-app
+          cd puckpulse-app
           flutter build apk --release --build-name=${{ needs.version.outputs.version }} --build-number=1
 
       - name: Rename APK
-        run: cp scoremaster-app/build/app/outputs/flutter-apk/app-release.apk scoremaster-app-v${{ needs.version.outputs.version }}.apk
+        run: cp puckpulse-app/build/app/outputs/flutter-apk/app-release.apk puckpulse-app-v${{ needs.version.outputs.version }}.apk
 
       - name: Stage Android Artifacts
         run: |
           mkdir -p staging
-          cp scoremaster-app-v${{ needs.version.outputs.version }}.apk staging/
+          cp puckpulse-app-v${{ needs.version.outputs.version }}.apk staging/
 
       - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
@@ -206,29 +206,29 @@ jobs:
         with:
           path: |
             ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('scoremaster-app/pubspec.lock') }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('puckpulse-app/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
       - name: Install App Dependencies
         run: |
-          cd scoremaster-app
+          cd puckpulse-app
           flutter pub get
 
       - name: Build Linux
         run: |
-          cd scoremaster-app
+          cd puckpulse-app
           flutter build linux --release --build-name=${{ needs.version.outputs.version }}
 
       - name: Package Linux
         run: |
-          cd scoremaster-app/build/linux/x64/release/bundle
-          tar -czvf ../../../../../scoremaster-app-linux.tar.gz .
+          cd puckpulse-app/build/linux/x64/release/bundle
+          tar -czvf ../../../../../puckpulse-app-linux.tar.gz .
 
       - name: Stage Linux Artifacts
         run: |
           mkdir -p staging
-          cp scoremaster-app/scoremaster-app-linux.tar.gz staging/
+          cp puckpulse-app/puckpulse-app-linux.tar.gz staging/
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4

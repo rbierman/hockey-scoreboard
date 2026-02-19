@@ -1,17 +1,17 @@
-# Hockey Scoreboard Monorepo
+# PuckPulse Monorepo
 
 This project is a hockey scoreboard system consisting of a high-performance C++ renderer and a Flutter-based mobile control application.
 
 ## Project Structure
 
-- **`scoreboard-system/`**: The core C++ application. It handles real-time rendering of the scoreboard and hosts a WebSocket server for remote control.
+- **`puckpulse-controller/`**: The core C++ application. It handles real-time rendering of the scoreboard and hosts a WebSocket server for remote control.
   - **Technologies**: C++26, CMake, SFML (Windowing/Events), Blend2D (2D Rendering), ixwebsocket (WebSocket Server), nlohmann_json (JSON parsing), vcpkg (Dependency Management).
   - **Key Components**:
     - `ScoreboardRenderer`: Uses Blend2D to draw the scoreboard UI.
     - `ScoreboardController`: Manages the game state (score, time, penalties).
     - `WebSocketManager`: Handles incoming commands from the mobile app.
     - `NetworkManager`: Manages mDNS service discovery (via `mdns.h`).
-- **`scoreboard-app/`**: A Flutter mobile application to control the scoreboard remotely.
+- **`puckpulse-app/`**: A Flutter mobile application to control the scoreboard remotely.
   - **Technologies**: Flutter (Dart), `bonsoir` (mDNS discovery), `web_socket_channel` (Communication).
   - **Key Components**:
     - `WebSocketService`: Manages the connection and command sending to the scoreboard system.
@@ -20,18 +20,14 @@ This project is a hockey scoreboard system consisting of a high-performance C++ 
 
 ## Building and Running
 
-### Scoreboard System (C++)
+### PuckPulse Controller (C++)
 
 The system requires `vcpkg` for dependencies and `ninja` for building.
 
 1.  **Configure**:
     ```bash
-    cd scoreboard-system
+    cd puckpulse-controller
     ./configure.sh
-    ```
-    *Note: `configure.sh` currently uses hardcoded paths for CMake and Ninja. You may need to run a standard CMake command if those paths differ on your system:*
-    ```bash
-    cmake -B cmake-build-debug -G Ninja -DCMAKE_TOOLCHAIN_FILE=[PATH_TO_VCPKG]/scripts/buildsystems/vcpkg.cmake
     ```
 
 2.  **Build**:
@@ -41,14 +37,14 @@ The system requires `vcpkg` for dependencies and `ninja` for building.
 
 3.  **Run**:
     ```bash
-    ./cmake-build-debug/hockey-scoreboard
+    ./cmake-build-debug/puckpulse-controller
     ```
 
-### Scoreboard App (Flutter)
+### PuckPulse App (Flutter)
 
 1.  **Install Dependencies**:
     ```bash
-    cd scoreboard-app
+    cd puckpulse-app
     flutter pub get
     ```
 
