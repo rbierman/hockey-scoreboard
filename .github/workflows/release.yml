@@ -1,4 +1,4 @@
-name: Controller - Release
+name: Release
 
 on:
   workflow_dispatch:
@@ -12,15 +12,15 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  version:
     runs-on: ubuntu-latest
-    env:
-      VCPKG_BINARY_SOURCES: 'clear;files,${{ github.workspace }}/vcpkg_cache,readwrite'
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetch all tags
+          fetch-depth: 0
 
       - name: Determine Version
         id: get_version
@@ -42,6 +42,15 @@ jobs:
           fi
           echo "Final Version: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  build-controller:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VCPKG_BINARY_SOURCES: 'clear;files,${{ github.workspace }}/vcpkg_cache,readwrite'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Install System Dependencies
         run: |
@@ -79,7 +88,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_SFML=ON \
             -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
-            -DSCOREMASTER_VERSION=${{ steps.get_version.outputs.version }}
+            -DSCOREMASTER_VERSION=${{ needs.version.outputs.version }}
           cmake --build build-standard
 
       - name: Configure and Build Headless (no SFML)
@@ -89,7 +98,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DENABLE_SFML=OFF \
             -DCMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake \
-            -DSCOREMASTER_VERSION=${{ steps.get_version.outputs.version }}
+            -DSCOREMASTER_VERSION=${{ needs.version.outputs.version }}
           cmake --build build-headless
 
       - name: Package
@@ -101,14 +110,87 @@ jobs:
           cd build-standard && cpack -G DEB && cd ..
           cd build-headless && cpack -G DEB && cd ..
 
+      - name: Upload Controller Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: controller-debs
+          path: |
+            build-standard/*.deb
+            build-headless/*.deb
+
+  build-app:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build \
+            libgtk-3-dev \
+            libblkid-dev \
+            liblzma-dev \
+            libgcrypt20-dev \
+            pkg-config
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install App Dependencies
+        run: |
+          cd scoremaster-app
+          flutter pub get
+
+      - name: Build Android APK
+        run: |
+          cd scoremaster-app
+          flutter build apk --release --build-name=${{ needs.version.outputs.version }} --build-number=1
+
+      - name: Build Linux
+        run: |
+          cd scoremaster-app
+          flutter build linux --release --build-name=${{ needs.version.outputs.version }}
+
+      - name: Package Linux
+        run: |
+          cd scoremaster-app/build/linux/x64/release/bundle
+          tar -czvf ../../../../../scoremaster-app-linux.tar.gz .
+
+      - name: Rename APK
+        run: cp scoremaster-app/build/app/outputs/flutter-apk/app-release.apk scoremaster-app-v${{ needs.version.outputs.version }}.apk
+
+      - name: Upload App Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-artifacts
+          path: |
+            scoremaster-app-v${{ needs.version.outputs.version }}.apk
+            scoremaster-app-linux.tar.gz
+
+  release:
+    needs: [version, build-controller, build-app]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.get_version.outputs.version }}
-          name: Release v${{ steps.get_version.outputs.version }}
+          tag_name: v${{ needs.version.outputs.version }}
+          name: Release v${{ needs.version.outputs.version }}
           files: |
-            build-standard/*.deb
-            build-headless/*.deb
+            *.deb
+            *.apk
+            *.tar.gz
           draft: false
           prerelease: false
         env:
